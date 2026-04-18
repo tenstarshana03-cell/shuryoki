@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>狩猟記 — 管理者版</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;700&display=swap"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --moss:#2a4a1a;--moss2:#3d6b28;--moss3:#527a35;
+  --bark:#3e2410;--bark2:#5c3820;--bark3:#7a4e30;
+  --earth:#d4c4a8;--earth2:#e8dcc8;--earth3:#f2ead8;--earth4:#f8f3ea;
+  --stone:#8a7a68;--stone2:#b0a090;
+  --rust:#8b3a1a;--rust2:#c05020;
+  --water:#2a4a5a;--water2:#3a6a7a;
+  --mist:#f0ece4;--ink:#1e1408;--ink2:#2e2010;
+  --admin:#1a3a5a;--admin2:#2a5a8a;
+}
+body{background:#f0ece4;display:flex;justify-content:center;font-family:'Noto Serif JP',serif;}
+.app{width:100%;max-width:480px;min-height:100vh;background:var(--earth4);color:var(--ink);position:relative;}
+.page{display:none;min-height:100vh;padding-bottom:68px;}
+.page.active{display:block;}
+.topbar{background:var(--moss);padding:13px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:50;border-bottom:2px solid var(--moss2);}
+.topbar-title{color:#f2ead8;font-size:19px;font-weight:700;letter-spacing:.2em;flex:1;font-family:'Noto Serif JP',serif;}
+.topbar-sub{color:rgba(242,234,216,.65);font-size:11px;}
+.back-btn{background:none;border:none;color:#f2ead8;cursor:pointer;padding:4px;font-size:20px;}
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#3e2410;border-top:3px solid #5c3820;display:flex;z-index:100;}
+.bnav button{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 0 7px;border:none;background:transparent;cursor:pointer;font-size:9px;gap:3px;font-family:'Noto Serif JP',serif;}
+.card{background:var(--earth4);border-radius:12px;margin-bottom:16px;overflow:hidden;border:1px solid var(--earth);position:relative;}
+.card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--moss2);}
+.note-card{background:var(--earth4);border-radius:12px;margin-bottom:16px;padding:16px;border:1px solid var(--earth);position:relative;}
+.note-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--water);}
+.method-badge{font-size:11px;background:var(--moss);color:#f2ead8;padding:3px 10px;border-radius:4px;font-weight:500;}
+.prey-tag{display:inline-flex;align-items:center;gap:3px;padding:3px 10px;border-radius:4px;font-size:12px;background:var(--bark2);color:#f2ead8;font-weight:500;}
+.env-tag{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;background:var(--moss3);color:#f2ead8;}
+.note-cat{display:inline-block;padding:3px 10px;border-radius:4px;font-size:11px;background:var(--water);color:#f2ead8;font-weight:500;}
+.stop-tag{display:inline-block;padding:2px 9px;border-radius:3px;font-size:11px;background:var(--rust);color:#f2ead8;}
+.priv-badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;background:var(--stone);color:#f2ead8;margin-left:4px;}
+.btn-moss{background:var(--moss);color:#f2ead8;border:none;border-radius:6px;padding:9px 20px;cursor:pointer;font-weight:500;font-size:14px;font-family:'Noto Serif JP',serif;}
+.btn-water{background:var(--water);color:#f2ead8;border:none;border-radius:6px;padding:8px 18px;cursor:pointer;font-weight:500;font-size:13px;font-family:'Noto Serif JP',serif;}
+.btn-admin{background:var(--admin);color:#f2ead8;border:none;border-radius:6px;padding:8px 18px;cursor:pointer;font-weight:500;font-size:13px;font-family:'Noto Serif JP',serif;}
+.btn-ghost{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.35);color:#f2ead8;border-radius:6px;padding:7px 14px;cursor:pointer;font-size:13px;font-family:'Noto Serif JP',serif;}
+.btn-danger{background:var(--rust2);color:#f2ead8;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:'Noto Serif JP',serif;}
+.inp{width:100%;border:1px solid var(--earth);border-radius:6px;padding:9px 12px;font-size:13px;background:var(--mist);color:var(--ink);font-family:'Noto Serif JP',serif;}
+.inp:focus{outline:2px solid var(--moss2);outline-offset:-1px;background:#fff;}
+.sec{background:var(--earth4);border-radius:10px;padding:14px;margin-bottom:12px;border:1px solid var(--earth2);}
+.slbl{font-size:12px;font-weight:700;color:var(--moss2);margin-bottom:8px;display:block;letter-spacing:.1em;}
+.mchip{display:inline-block;padding:9px 18px;border-radius:6px;font-size:14px;margin:3px;cursor:pointer;background:var(--earth2);color:var(--ink2);border:2px solid var(--earth);transition:all .15s;font-family:'Noto Serif JP',serif;}
+.mchip.sel{background:var(--moss)!important;color:#f2ead8!important;border-color:var(--moss2)!important;box-shadow:0 3px 10px rgba(42,74,26,.45);font-weight:700;transform:scale(1.04);}
+.schip{display:inline-block;padding:7px 14px;border-radius:5px;font-size:13px;margin:3px;cursor:pointer;background:var(--earth2);color:var(--ink2);border:1.5px solid var(--earth);transition:all .15s;font-family:'Noto Serif JP',serif;}
+.schip.sel{background:var(--moss2)!important;color:#f2ead8!important;border-color:var(--moss2)!important;font-weight:500;}
+.chip{display:inline-block;padding:6px 14px;border-radius:5px;font-size:13px;margin:3px;cursor:pointer;background:var(--earth2);color:var(--ink2);border:1.5px solid transparent;transition:all .15s;font-family:'Noto Serif JP',serif;}
+.chip.sel{background:var(--moss);color:#f2ead8;border-color:var(--moss2);}
+.chip.stopchip.sel{background:var(--rust);color:#f2ead8;}
+.like-btn{display:flex;align-items:center;gap:5px;background:none;border:none;cursor:pointer;color:var(--stone);padding:0;font-size:13px;font-family:'Noto Serif JP',serif;}
+.like-btn.liked{color:var(--rust2);}
+.av{border-radius:50%;background:var(--moss);display:flex;align-items:center;justify-content:center;color:#f2ead8;font-weight:700;flex-shrink:0;overflow:hidden;font-family:'Noto Serif JP',serif;}
+.av img{width:100%;height:100%;object-fit:cover;}
+.sb{overflow-y:auto;padding:14px;}
+.feed-tabs{display:flex;background:#3e2410;border-radius:8px;padding:3px;gap:3px;margin-bottom:14px;}
+.feed-tab{flex:1;padding:8px;border:none;background:transparent;border-radius:5px;cursor:pointer;font-size:13px;font-family:'Noto Serif JP',serif;transition:all .15s;}
+.ph{background:var(--moss);padding:14px 16px 0;position:relative;overflow:hidden;}
+.ph-deco{position:absolute;right:-10px;bottom:0;opacity:.08;font-size:120px;line-height:1;pointer-events:none;}
+.dm-row{background:var(--earth4);border-radius:10px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer;border:1px solid var(--earth2);}
+.msg-me{background:var(--moss);color:#f2ead8;border-radius:14px 14px 4px 14px;padding:10px 14px;max-width:75%;font-size:13px;}
+.msg-ot{background:var(--earth4);color:var(--ink);border-radius:14px 14px 14px 4px;padding:10px 14px;max-width:75%;font-size:13px;border:1px solid var(--earth);}
+.sc{background:var(--earth4);border-radius:10px;padding:14px 10px;text-align:center;border:1px solid var(--earth);}
+.media-thumb{position:relative;width:76px;height:76px;border-radius:6px;overflow:hidden;flex-shrink:0;border:1px solid var(--earth);}
+.media-thumb img{width:100%;height:100%;object-fit:cover;}
+.media-del{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;border:none;cursor:pointer;font-size:11px;}
+.send-btn{width:38px;height:38px;border-radius:50%;background:var(--moss);color:#f2ead8;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.send-btn:disabled{background:var(--stone2);cursor:default;}
+.modal-bg{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(30,20,8,.6);z-index:200;align-items:center;justify-content:center;padding:20px;}
+.modal-bg.show{display:flex;}
+.modal-box{background:var(--earth4);border-radius:14px;padding:20px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto;border:1px solid var(--earth);}
+.login-wrap{min-height:100vh;background:var(--moss);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden;}
+.login-deco{position:absolute;opacity:.06;font-size:200px;pointer-events:none;}
+.login-box{width:100%;max-width:340px;background:var(--earth4);border-radius:16px;padding:22px;border:1px solid var(--earth);}
+/* 猟場マップ */
+.mv-chip{padding:4px 10px;border-radius:14px;font-size:11px;cursor:pointer;border:1px solid rgba(242,234,216,.35);background:rgba(255,255,255,.1);color:rgba(242,234,216,.7);font-family:'Noto Serif JP',serif;transition:all .15s;}
+.mv-chip.on{background:#f2ead8;color:var(--moss);border-color:#f2ead8;font-weight:500;}
+.mv-tab{flex:1;padding:9px 0;border:none;background:transparent;cursor:pointer;font-size:13px;font-family:'Noto Serif JP',serif;color:var(--stone);border-bottom:2px solid transparent;transition:all .15s;}
+.mv-tab.on{color:var(--moss2);border-bottom-color:var(--moss2);font-weight:500;}
+.mv-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.mv-bar-lbl{width:82px;font-size:12px;color:var(--ink2);flex-shrink:0;text-align:right;}
+.mv-bar-track{flex:1;height:14px;background:var(--earth2);border-radius:3px;overflow:hidden;}
+.mv-bar-fill{height:100%;border-radius:3px;transition:width .5s;}
+.mv-bar-val{width:24px;font-size:11px;color:var(--stone);text-align:right;}
+.admin-topbar{background:var(--admin);border-bottom:2px solid var(--admin2);}
+.admin-tab{flex:1;padding:8px 4px;border:none;background:transparent;border-radius:5px;cursor:pointer;font-size:11px;font-family:'Noto Serif JP',serif;}
+.admin-card{background:var(--earth4);border-radius:8px;padding:12px;margin-bottom:8px;border:1px solid var(--earth2);border-left:3px solid var(--admin);}
+.badge-admin{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;background:var(--admin);color:#f2ead8;margin-left:6px;}
+/* 接続設定 */
+.setup-card{background:var(--earth4);border-radius:14px;padding:20px;border:1px solid var(--earth);margin-bottom:12px;}
+.status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px;}
+.dot-ok{background:#27ae60;}
+.dot-ng{background:var(--rust2);}
+.dot-wait{background:var(--stone2);}
+#map-outer{width:100%;height:220px;border-radius:8px;overflow:hidden;border:1px solid var(--earth);background:#e0e8d8;}
+#gsi-map{width:100%;height:100%;}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+<!-- ============================================================ -->
+<!-- SETUP PAGE（初回設定） -->
+<!-- ============================================================ -->
+<div class="page active" id="p-setup">
+<div class="login-wrap">
+  <div style="text-align:center;margin-bottom:24px;">
+    <div style="font-size:28px;margin-bottom:8px;opacity:.55;">⛰ 🌿 🐗</div>
+    <h1 style="font-size:38px;font-weight:700;color:#f2ead8;letter-spacing:.3em;font-family:'Noto Serif JP',serif;">狩猟記</h1>
+    <p style="color:rgba(242,234,216,.6);font-size:12px;margin-top:6px;">Supabase 接続設定</p>
+  </div>
+  <div class="login-box">
+    <h2 style="color:var(--ink);margin-bottom:4px;font-size:16px;">🔧 データベース接続</h2>
+    <p style="font-size:11px;color:var(--stone);margin-bottom:16px;line-height:1.6;">Supabaseのプロジェクト情報を入力してください。<br>設定後はブラウザに保存されます。</p>
+    <div id="setup-status" style="padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:12px;background:rgba(139,58,26,.08);color:var(--rust);border:1px solid rgba(139,58,26,.2);">未接続</div>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:12px;color:var(--ink2);display:block;margin-bottom:4px;">Project URL</label>
+      <input id="sb-url" class="inp" placeholder="https://xxxx.supabase.co"/>
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="font-size:12px;color:var(--ink2);display:block;margin-bottom:4px;">Anon / Public Key</label>
+      <input id="sb-key" class="inp" placeholder="eyJ..."/>
+    </div>
+    <button class="btn-moss" style="width:100%;padding:11px;letter-spacing:.1em;margin-bottom:8px;" onclick="connectSupabase()">接続する</button>
+    <div style="border-top:1px solid var(--earth);padding-top:12px;margin-top:4px;">
+      <p style="font-size:11px;color:var(--stone);margin-bottom:8px;">⚠️ Supabaseをまだ設定していない場合はデモモードで確認できます</p>
+      <button onclick="startDemo()" style="width:100%;padding:9px;background:transparent;color:var(--moss2);font-size:13px;border:1px solid var(--moss2);border-radius:6px;cursor:pointer;font-family:'Noto Serif JP',serif;">デモモードで起動</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<!-- LOGIN -->
+<!-- ============================================================ -->
+<div class="page" id="p-login">
+<div class="login-wrap">
+  <div class="login-deco" style="top:-40px;left:-30px;">🌲</div>
+  <div class="login-deco" style="bottom:-60px;right:-30px;">🦌</div>
+  <div style="text-align:center;margin-bottom:28px;">
+    <div style="font-size:28px;margin-bottom:10px;opacity:.55;">⛰ 🌿 🐗</div>
+    <h1 style="font-size:44px;font-weight:700;color:#f2ead8;letter-spacing:.3em;font-family:'Noto Serif JP',serif;line-height:1.2;">狩猟記</h1>
+    <div style="width:60px;height:2px;background:var(--bark3);margin:10px auto;"></div>
+    <p style="color:rgba(242,234,216,.6);font-size:12px;letter-spacing:.1em;">猟師のための記録・共有の場</p>
+  </div>
+  <div class="login-box">
+    <h2 style="text-align:center;color:var(--ink);margin-bottom:16px;font-size:16px;">ログイン</h2>
+    <div id="lerr" style="color:var(--rust2);font-size:12px;text-align:center;margin-bottom:8px;display:none;"></div>
+    <div style="margin-bottom:10px;"><label style="font-size:12px;color:var(--ink2);display:block;margin-bottom:4px;">メールアドレス</label><input id="lu" class="inp" placeholder="email@example.com" type="email"/></div>
+    <div style="margin-bottom:8px;"><label style="font-size:12px;color:var(--ink2);display:block;margin-bottom:4px;">パスワード</label><input id="lp" type="password" class="inp" placeholder="パスワード"/></div>
+    <button class="btn-moss" style="width:100%;padding:11px;letter-spacing:.15em;margin-top:6px;" onclick="doLogin()">山へ入る</button>
+    <button style="width:100%;margin-top:8px;padding:9px;background:transparent;color:var(--moss2);font-size:13px;border:none;cursor:pointer;font-family:'Noto Serif JP',serif;" onclick="go('p-reg')">新規登録はこちら</button>
+    <button style="width:100%;margin-top:4px;padding:7px;background:transparent;color:var(--stone);font-size:11px;border:none;cursor:pointer;font-family:'Noto Serif JP',serif;" onclick="go('p-setup')">接続設定に戻る</button>
+  </div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<!-- REGISTER -->
+<!-- ============================================================ -->
+<div class="page" id="p-reg">
+<div class="login-wrap">
+  <h1 style="font-size:38px;font-weight:700;color:#f2ead8;letter-spacing:.3em;font-family:'Noto Serif JP',serif;margin-bottom:22px;">狩猟記</h1>
+  <div class="login-box">
+    <h2 style="color:var(--ink);margin-bottom:14px;font-size:16px;">新規登録</h2>
+    <div id="rerr" style="color:var(--rust2);font-size:12px;margin-bottom:8px;display:none;"></div>
+    <div style="margin-bottom:10px;"><label style="font-size:12px;color:var(--ink2);display:block;margin-bottom:4px;">表示名 *</label><input id="rn" class="inp" placeholder="山城 猛"/></div>
+    <div style="margin-bottom:10px;"><label style="font-size:12px;color:var(--ink2);display:block;margin-bottom:4px;">ユーザー名 * (英数字)</label><input id="ru" class="inp" placeholder="yamashiro"/></div>
+    <div style="margin-bottom:10px;"><label style="font-size:12px;color:var(--ink2);display:block;margin-bottom:4px;">メールアドレス *</label><input id="re" class="inp" type="email" placeholder="email@example.com"/></div>
+    <div style="margin-bottom:10px;"><label style="font-size:12px;color:var(--ink2);display:block;margin-bottom:4px;">パスワード *</label><input id="rp" type="password" class="inp" placeholder="8文字以上"/></div>
+    <div style="margin-bottom:12px;"><label style="font-size:12px;color:var(--ink2);display:block;margin-bottom:4px;">自己紹介</label><textarea id="rb" class="inp" rows="2" style="resize:none;" placeholder="自己紹介（任意）"></textarea></div>
+    <button class="btn-moss" style="width:100%;padding:11px;" onclick="doReg()">登録する</button>
+    <button style="width:100%;margin-top:8px;padding:9px;background:transparent;color:var(--moss2);font-size:13px;border:none;cursor:pointer;font-family:'Noto Serif JP',serif;" onclick="go('p-login')">ログインに戻る</button>
+  </div>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TIMELINE -->
+<!-- ============================================================ -->
+<div class="page" id="p-timeline">
+  <div class="topbar">
+    <span style="font-size:13px;opacity:.5;margin-right:2px;">⛰</span>
+    <span class="topbar-title">狩猟記 <span style="font-size:10px;background:rgba(255,255,255,.2);padding:2px 7px;border-radius:10px;letter-spacing:.05em;">管理</span></span>
+    <span class="topbar-sub" id="tl-sub">タイムライン</span>
+    <span id="demo-badge" style="display:none;font-size:10px;background:var(--rust);color:#f2ead8;padding:2px 8px;border-radius:10px;margin-left:6px;">デモ</span>
+  </div>
+  <div style="padding:12px 14px 0;">
+    <div class="feed-tabs">
+      <button class="feed-tab" id="ft-hunt" onclick="setFeedTab('hunt')">🎯 狩猟記録</button>
+      <button class="feed-tab" id="ft-note" onclick="setFeedTab('note')">📖 発見・豆知識</button>
+    </div>
+  </div>
+  <div class="sb" id="tl-body"></div>
+  <nav class="bnav" id="bn1"></nav>
+</div>
+
+<!-- ============================================================ -->
+<!-- POST DETAIL -->
+<!-- ============================================================ -->
+<div class="page" id="p-detail">
+  <div class="topbar"><button class="back-btn" onclick="go('p-timeline')">←</button><span class="topbar-title" style="font-size:15px;letter-spacing:.08em;">投稿詳細</span><span style="flex:1;"></span><span id="d-auth"></span></div>
+  <div class="sb" id="d-body"></div>
+  <nav class="bnav" id="bn2"></nav>
+</div>
+
+<!-- NOTE DETAIL -->
+<div class="page" id="p-note-detail">
+  <div class="topbar" style="background:var(--water);border-bottom-color:var(--water2);"><button class="back-btn" onclick="go('p-timeline')">←</button><span class="topbar-title" style="font-size:15px;letter-spacing:.08em;">発見・豆知識</span><span style="flex:1;"></span><span id="nd-auth"></span></div>
+  <div class="sb" id="nd-body"></div>
+  <nav class="bnav" id="bn-nd"></nav>
+</div>
+
+<!-- ============================================================ -->
+<!-- CREATE -->
+<!-- ============================================================ -->
+<div class="page" id="p-create">
+  <div class="topbar"><button class="back-btn" onclick="go('p-timeline')">←</button><span class="topbar-title" style="font-size:15px;letter-spacing:.08em;">新規投稿</span></div>
+  <div style="padding:12px 14px 0;">
+    <div class="feed-tabs">
+      <button class="feed-tab" id="ct-hunt" onclick="setCreateTab('hunt')">🎯 狩猟記録</button>
+      <button class="feed-tab" id="ct-note" onclick="setCreateTab('note')">📖 発見・豆知識</button>
+    </div>
+  </div>
+  <div id="create-hunt" class="sb" style="padding-top:4px;">
+    <div class="sec"><span class="slbl">公開設定</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="chip sel" id="pub-btn" onclick="setPub('public')" style="padding:8px 18px;font-size:13px;">🌐 タイムラインで公開</button>
+        <button class="chip" id="rec-btn" onclick="setPub('private')" style="padding:8px 18px;font-size:13px;">🔒 記録のみ</button>
+      </div>
+      <div id="pub-desc" style="font-size:11px;color:var(--stone);margin-top:6px;">フォロワーのタイムラインに表示されます</div>
+    </div>
+    <div class="sec"><span class="slbl">🏹 猟法を選択</span>
+      <div id="method-chips" style="display:flex;flex-wrap:wrap;gap:2px;"></div>
+      <div id="sub-wrap" style="margin-top:12px;display:none;padding-top:10px;border-top:1px solid var(--earth2);"><div style="font-size:11px;color:var(--stone);margin-bottom:6px;">詳細猟法</div><div id="sub-chips"></div></div>
+      <div id="stop-wrap" style="display:none;margin-top:12px;padding:10px;background:rgba(139,58,26,.08);border-radius:6px;border-left:3px solid var(--rust);"><div style="font-size:12px;color:var(--rust);margin-bottom:6px;font-weight:500;">止め方（複数可）</div><div id="stop-chips"></div></div>
+      <div id="dog-wrap" style="display:none;margin-top:12px;padding:10px;background:rgba(42,74,26,.06);border-radius:6px;border-left:3px solid var(--moss3);"><div style="font-size:11px;color:var(--moss2);margin-bottom:6px;">使用猟犬</div><div id="dog-rows"></div><button style="font-size:12px;color:var(--moss2);background:none;border:1px dashed var(--moss3);border-radius:5px;padding:4px 12px;cursor:pointer;margin-top:4px;" onclick="addDog()">+ 犬を追加</button></div>
+    </div>
+    <div class="sec"><span class="slbl">🎯 獲物（複数可）</span><div id="prey-rows"></div><button style="font-size:12px;color:var(--moss2);background:none;border:1px dashed var(--moss3);border-radius:5px;padding:4px 12px;cursor:pointer;" onclick="addPrey()">+ 獲物を追加</button></div>
+    <div class="sec"><span class="slbl">📍 場所</span>
+      <!-- 地名テキスト入力 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div>
+          <label style="font-size:11px;color:var(--stone);display:block;margin-bottom:4px;">都道府県</label>
+          <input id="c-pref" class="inp" placeholder="例: 栃木県" style="padding:8px 10px;"/>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--stone);display:block;margin-bottom:4px;">市・町・村</label>
+          <input id="c-city2" class="inp" placeholder="例: 日光市" style="padding:8px 10px;"/>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--stone);display:block;margin-bottom:4px;">区・地区</label>
+          <input id="c-ward" class="inp" placeholder="例: 今市地区" style="padding:8px 10px;"/>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--stone);display:block;margin-bottom:4px;">地域・集落名</label>
+          <input id="c-area" class="inp" placeholder="例: 霧降高原" style="padding:8px 10px;"/>
+        </div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <label style="font-size:11px;color:var(--stone);display:block;margin-bottom:4px;">山・川・地形名</label>
+        <input id="c-mountain" class="inp" placeholder="例: 男体山、鬼怒川、大越路峠"/>
+      </div>
+      <!-- 地図ピン -->
+      <div style="font-size:11px;color:var(--stone);margin-bottom:6px;padding-top:8px;border-top:1px solid var(--earth2);">地図でピンを立てる（任意）</div>
+      <div id="map-outer"><div id="gsi-map"></div></div>
+      <div id="pin-info" style="font-size:12px;color:var(--moss2);margin-top:6px;min-height:16px;"></div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;margin-top:10px;color:var(--ink2);"><input type="checkbox" id="c-blur" style="width:16px;height:16px;accent-color:var(--moss);"/><span>位置をぼかす（地名も都道府県のみ公開）</span></label>
+    </div>
+    <div class="sec"><span class="slbl">🌲 環境（複数可）</span><div id="env-chips"></div></div>
+    <div class="sec"><span class="slbl">📅 捕獲日時</span><div style="display:flex;gap:8px;"><input type="date" id="c-date" class="inp" style="flex:3;"/><input type="time" id="c-time" class="inp" style="flex:2;"/></div></div>
+    <div class="sec"><span class="slbl">📝 記録メモ</span><textarea id="c-memo" class="inp" rows="4" style="resize:none;line-height:1.7;" placeholder="詳細や感想を自由に…"></textarea></div>
+    <div class="sec"><span class="slbl">📷 写真・動画</span>
+      <div id="media-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;"></div>
+      <label style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;background:var(--earth2);border-radius:6px;cursor:pointer;font-size:13px;color:var(--ink2);">📎 ファイルを選択<input type="file" id="media-inp" accept="image/*,video/*" multiple style="display:none;" onchange="handleMedia(this)"/></label>
+      <p style="font-size:10px;color:var(--stone);margin-top:4px;">※ Supabase Storageに保存されます</p>
+    </div>
+    <div id="post-err" style="color:var(--rust2);font-size:12px;padding:0 0 8px;display:none;"></div>
+    <div style="padding:0 0 14px;"><button class="btn-moss" id="post-submit-btn" style="width:100%;padding:12px;letter-spacing:.15em;" onclick="submitPost()">記録を残す</button></div>
+  </div>
+  <div id="create-note" style="display:none;" class="sb">
+    <div class="sec"><span class="slbl">タイトル</span><input id="n-title" class="inp" placeholder="例: なぜ尾根が大事なのか"/></div>
+    <div class="sec"><span class="slbl">カテゴリー</span><div id="note-cat-chips"></div></div>
+    <div class="sec"><span class="slbl">本文</span><textarea id="n-body" class="inp" rows="10" style="resize:none;line-height:1.8;" placeholder="発見や豆知識を自由に書いてください…"></textarea></div>
+    <div style="padding:0 0 14px;"><button class="btn-water" style="width:100%;padding:12px;letter-spacing:.15em;" onclick="submitNote()">投稿する</button></div>
+  </div>
+  <nav class="bnav" id="bn3"></nav>
+</div>
+
+<!-- MY PROFILE -->
+<div class="page" id="p-my"><div id="my-hdr" class="ph"></div><div class="sb" id="my-body"></div><nav class="bnav" id="bn4"></nav></div>
+
+<!-- SEARCH -->
+<div class="page" id="p-search">
+  <div class="topbar" style="flex-direction:column;align-items:stretch;gap:8px;padding-bottom:14px;"><span style="color:#f2ead8;font-size:15px;font-weight:500;">ユーザーを探す</span><input id="sq" class="inp" placeholder="ユーザー名で検索…" oninput="renderSearch()" style="border-radius:20px;"/></div>
+  <div class="sb" id="s-body"></div><nav class="bnav" id="bn5"></nav>
+</div>
+
+<!-- DMS -->
+<div class="page" id="p-dms"><div class="topbar"><span class="topbar-title" style="font-size:15px;letter-spacing:.08em;">ダイレクトメッセージ</span></div><div class="sb" id="dms-body"></div><nav class="bnav" id="bn6"></nav></div>
+<div class="page" id="p-chat">
+  <div class="topbar" id="chat-hdr"></div>
+  <div id="chat-msgs" style="overflow-y:auto;padding:14px 14px 4px;background:var(--earth4);min-height:200px;"></div>
+  <div style="padding:10px 14px;background:var(--earth3);border-top:1px solid var(--earth);display:flex;gap:8px;align-items:center;position:sticky;bottom:68px;">
+    <input id="chat-inp" class="inp" placeholder="メッセージを入力…" style="flex:1;border-radius:20px;" onkeydown="if(event.key==='Enter'&&!event.isComposing)sendMsg()"/>
+    <button id="send-btn" class="send-btn" onclick="sendMsg()">➤</button>
+  </div>
+  <nav class="bnav" id="bn7"></nav>
+</div>
+<div class="page" id="p-other"><div id="ot-hdr" class="ph"></div><div class="sb" id="ot-body"></div><nav class="bnav" id="bn8"></nav></div>
+
+<!-- ============================================================ -->
+<!-- ADMIN PAGE -->
+<!-- ============================================================ -->
+<div class="page" id="p-admin">
+  <div class="topbar admin-topbar">
+    <button class="back-btn" onclick="go('p-timeline')">←</button>
+    <span class="topbar-title" style="font-size:15px;letter-spacing:.08em;">管理者パネル</span>
+    <span style="font-size:10px;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:10px;color:#f2ead8;">ADMIN</span>
+  </div>
+  <!-- 管理タブ -->
+  <div style="display:flex;background:var(--admin);padding:4px 8px;gap:4px;">
+    <button class="admin-tab" id="at-stats" onclick="setAdminTab('stats')" style="color:#f2ead8;opacity:1;">📊 統計</button>
+    <button class="admin-tab" id="at-posts" onclick="setAdminTab('posts')" style="color:#f2ead8;opacity:.55;">📝 投稿</button>
+    <button class="admin-tab" id="at-users" onclick="setAdminTab('users')" style="color:#f2ead8;opacity:.55;">👥 ユーザー</button>
+    <button class="admin-tab" id="at-notes" onclick="setAdminTab('notes')" style="color:#f2ead8;opacity:.55;">📖 ノート</button>
+  </div>
+  <div class="sb" id="admin-body"></div>
+  <nav class="bnav" id="bn-admin"></nav>
+</div>
+
+<!-- ============================================================ -->
+<!-- MAPVIEW PAGE 猟場データビュー -->
+<!-- ============================================================ -->
+<div class="page" id="p-mapview">
+  <div class="topbar" style="background:var(--moss);flex-direction:column;align-items:stretch;padding-bottom:10px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span class="topbar-title" style="font-size:16px;letter-spacing:.1em;">🗺 猟場データビュー</span>
+      <span id="mv-count" style="font-size:11px;color:rgba(242,234,216,.65);"></span>
+    </div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px;" id="mv-filter-method">
+      <button class="mv-chip on" data-val="all" onclick="mvSetFilter('method','all',this)">全猟法</button>
+      <button class="mv-chip" data-val="銃猟" onclick="mvSetFilter('method','銃猟',this)">銃猟</button>
+      <button class="mv-chip" data-val="罠猟" onclick="mvSetFilter('method','罠猟',this)">罠猟</button>
+      <button class="mv-chip" data-val="網猟" onclick="mvSetFilter('method','網猟',this)">網猟</button>
+    </div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;" id="mv-filter-prey">
+      <button class="mv-chip on" data-val="all" onclick="mvSetFilter('prey','all',this)">全獲物</button>
+      <button class="mv-chip" data-val="イノシシ" onclick="mvSetFilter('prey','イノシシ',this)">イノシシ</button>
+      <button class="mv-chip" data-val="ニホンジカ" onclick="mvSetFilter('prey','ニホンジカ',this)">シカ</button>
+      <button class="mv-chip" data-val="マガモ" onclick="mvSetFilter('prey','マガモ',this)">マガモ</button>
+      <button class="mv-chip" data-val="タヌキ" onclick="mvSetFilter('prey','タヌキ',this)">タヌキ</button>
+      <button class="mv-chip" data-val="キジ" onclick="mvSetFilter('prey','キジ',this)">キジ</button>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;background:var(--bark);border-bottom:3px solid var(--bark2);">
+    <div style="text-align:center;padding:8px 4px;border-right:1px solid var(--bark2);">
+      <div id="mv-s-total" style="font-size:20px;font-weight:700;color:#f2ead8;">0</div>
+      <div style="font-size:10px;color:rgba(242,234,216,.6);">総捕獲数</div>
+    </div>
+    <div style="text-align:center;padding:8px 4px;border-right:1px solid var(--bark2);">
+      <div id="mv-s-loc" style="font-size:20px;font-weight:700;color:#f2ead8;">0</div>
+      <div style="font-size:10px;color:rgba(242,234,216,.6);">猟場数</div>
+    </div>
+    <div style="text-align:center;padding:8px 4px;">
+      <div id="mv-s-sp" style="font-size:20px;font-weight:700;color:#f2ead8;">0</div>
+      <div style="font-size:10px;color:rgba(242,234,216,.6);">獲物種類</div>
+    </div>
+  </div>
+  <div style="display:flex;background:var(--earth4);border-bottom:1px solid var(--earth);">
+    <button class="mv-tab on" id="mvt-map" onclick="mvSwitchTab('map',this)">地図</button>
+    <button class="mv-tab" id="mvt-chart" onclick="mvSwitchTab('chart',this)">集計</button>
+    <button class="mv-tab" id="mvt-list" onclick="mvSwitchTab('list',this)">記録一覧</button>
+  </div>
+  <div id="mv-view-map" style="position:relative;">
+    <div id="mv-map" style="width:100%;height:340px;background:#e8f0e0;"></div>
+    <div style="position:absolute;bottom:10px;right:10px;background:rgba(255,255,255,.93);border-radius:6px;padding:7px 10px;font-size:11px;z-index:500;border:1px solid var(--earth);">
+      <div style="font-size:10px;color:var(--stone);margin-bottom:5px;letter-spacing:.05em;">獲物カテゴリ</div>
+      <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;"><div style="width:18px;height:18px;border-radius:50%;background:#8b1a1a;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;">🐗</div><span style="color:var(--ink2);">猪</span></div>
+      <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;"><div style="width:18px;height:18px;border-radius:50%;background:#1a5c8b;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;">🦌</div><span style="color:var(--ink2);">鹿</span></div>
+      <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;"><div style="width:18px;height:18px;border-radius:50%;background:#4a2a00;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;">🐻</div><span style="color:var(--ink2);">熊</span></div>
+      <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;"><div style="width:18px;height:18px;border-radius:50%;background:#2a6b3a;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;">🐦</div><span style="color:var(--ink2);">鳥類</span></div>
+      <div style="display:flex;align-items:center;gap:5px;"><div style="width:18px;height:18px;border-radius:50%;background:#6b6b6b;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;">🎯</div><span style="color:var(--ink2);">その他</span></div>
+    </div>
+    <div id="mv-popup" style="display:none;position:absolute;bottom:10px;left:10px;right:70px;background:var(--earth4);border-radius:8px;padding:10px 28px 10px 12px;font-size:12px;z-index:500;border-left:3px solid var(--moss2);box-shadow:0 2px 8px rgba(0,0,0,.15);">
+      <div id="mv-popup-content"></div>
+      <button onclick="document.getElementById('mv-popup').style.display='none'" style="position:absolute;top:6px;right:8px;background:none;border:none;cursor:pointer;color:var(--stone);font-size:14px;">✕</button>
+    </div>
+  </div>
+  <div id="mv-view-chart" style="display:none;padding:14px;">
+    <!-- どこで何が獲れたか -->
+    <div style="background:var(--earth4);border-radius:10px;padding:14px;margin-bottom:10px;border:1px solid var(--earth2);">
+      <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:12px;letter-spacing:.06em;">📍 どこで何が獲れたか</div>
+      <div id="mv-chart-location" style="overflow-x:auto;"></div>
+    </div>
+    <div style="background:var(--earth4);border-radius:10px;padding:14px;margin-bottom:10px;border:1px solid var(--earth2);">
+      <div style="font-size:12px;font-weight:700;color:var(--moss2);margin-bottom:10px;">🎯 獲物別 捕獲数</div>
+      <div id="mv-chart-prey"></div>
+    </div>
+    <div style="background:var(--earth4);border-radius:10px;padding:14px;margin-bottom:10px;border:1px solid var(--earth2);">
+      <div style="font-size:12px;font-weight:700;color:var(--moss2);margin-bottom:10px;">🏹 猟法別 件数</div>
+      <div id="mv-chart-method"></div>
+    </div>
+    <div style="background:var(--earth4);border-radius:10px;padding:14px;margin-bottom:10px;border:1px solid var(--earth2);">
+      <div style="font-size:12px;font-weight:700;color:var(--water);margin-bottom:10px;">🌲 環境別 捕獲傾向</div>
+      <div id="mv-chart-env"></div>
+    </div>
+    <div style="background:var(--earth4);border-radius:10px;padding:14px;margin-bottom:80px;border:1px solid var(--earth2);">
+      <div style="font-size:12px;font-weight:700;color:var(--bark2);margin-bottom:10px;">📅 月別 捕獲推移</div>
+      <div id="mv-chart-month"></div>
+    </div>
+  </div>
+  <div id="mv-view-list" style="display:none;padding:14px;">
+    <div id="mv-record-list"></div>
+    <div style="height:80px;"></div>
+  </div>
+  <nav class="bnav" id="bn-mv"></nav>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-bg" id="edit-modal" onclick="if(event.target===this)closeEdit()">
+  <div class="modal-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><h3 style="font-size:15px;color:var(--ink);">プロフィール編集</h3><button onclick="closeEdit()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--stone);">✕</button></div>
+    <div style="text-align:center;margin-bottom:16px;"><div id="edit-av" style="margin:0 auto 10px;"></div><label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:var(--earth2);border-radius:6px;cursor:pointer;font-size:13px;color:var(--ink2);">📷 画像を変更<input type="file" id="av-inp" accept="image/*" style="display:none;" onchange="handleAv(this)"/></label></div>
+    <div style="margin-bottom:10px;"><label style="font-size:12px;color:var(--ink2);display:block;margin-bottom:4px;">表示名</label><input id="e-name" class="inp"/></div>
+    <div style="margin-bottom:10px;"><label style="font-size:12px;color:var(--ink2);display:block;margin-bottom:4px;">ユーザー名</label><input id="e-uname" class="inp"/></div>
+    <div style="margin-bottom:14px;"><label style="font-size:12px;color:var(--ink2);display:block;margin-bottom:4px;">自己紹介</label><textarea id="e-bio" class="inp" rows="3" style="resize:none;"></textarea></div>
+    <button class="btn-moss" style="width:100%;padding:11px;" onclick="saveProfile()">保存する</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--moss);color:#f2ead8;padding:10px 20px;border-radius:20px;font-size:13px;z-index:300;font-family:'Noto Serif JP',serif;white-space:nowrap;"></div>
+
+</div><!-- /app -->
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ============================================================
+   定数
+============================================================ */
+const ALL_WL=["マガモ","カルガモ","コガモ","ヨシガモ","ヒドリガモ","オナガガモ","スズガモ","ヤマドリ","キジ","コジュケイ","エゾライチョウ","キジバト","ヒヨドリ","ハシボソガラス","ハシブトガラス","タシギ","ヤマシギ","バン","オオバン","ヒグマ","ツキノワグマ","イノシシ","ニホンジカ","タヌキ","キツネ","テン","イタチ","アナグマ","アライグマ","ノウサギ","ユキウサギ"];
+const ENVS=["広葉樹","竹林","針葉樹","田畑","谷","沢","河川","池","湿地"];
+const HSUBS={"銃猟":["鳥撃ち","巻狩り","忍び猟","単独猟"],"罠猟":["くくり罠","箱罠（檻）","囲い罠"],"網猟":[],"その他":[]};
+const STOP_METHODS=["鳴き止め","咬み止め","絡み止め"];
+const DOG_METHODS=["巻狩り","単独猟"];
+const STOP_REQ=["単独猟"];
+const NOTE_CATS=["猟場・地形","猟犬・犬育て","猟法・技術","動物の習性","食肉・解体","装備・道具","法律・資格","その他"];
+
+/* ============================================================
+   状態
+============================================================ */
+let sb=null; // Supabase client
+let isDemo=false;
+let me=null,curP='p-setup',detailId=null,noteDetailId=null,dmId=null,otherId=null;
+let myTab='posts',feedTab='hunt',createTab='hunt',adminTab='stats';
+let cPub='public',cMethod='',cSub='',cEnvs=[],cDogs=[{breed:'',name:'',count:1}],cPrey=[{name:'',count:1}],cMedia=[],cStops=[],cLat=null,cLng=null,cNoteCat='';
+let gsiMap=null,gsiMarker=null,sendLock=false,newAv=null;
+let demoData={users:[],posts:[],notes:[],dms:[],uid:0};
+
+/* ============================================================
+   デモデータ
+============================================================ */
+function initDemoData(){
+  demoData.users=[
+    {id:"u1",username:"yamashiro",display_name:"山城 猛",bio:"猟歴10年。イノシシとシカを主に狙います。",avatar_url:"",is_admin:true},
+    {id:"u2",username:"tanaka",display_name:"田中 義博",bio:"鴨猟専門。プロット犬と共に。",avatar_url:"",is_admin:false},
+    {id:"u3",username:"sato",display_name:"佐藤 花子",bio:"初心者ハンター2年目。",avatar_url:"",is_admin:false},
+  ];
+  demoData.posts=[
+    {id:"p1",user_id:"u2",is_public:true,created_at:"2025-11-15T08:30:00",hunting_method:"銃猟",hunting_sub_method:"鳥撃ち",prey:[{name:"マガモ",count:3}],dogs:[],stop_methods:[],location_lat:35.87,location_lng:140.02,location_city:"我孫子市 利根川沿い",location_blur:false,environments:["河川","池"],memo:"利根川沿いで早朝から狙いました！",media_urls:[],likes:["u1"],comments:[{id:"c1",user_id:"u1",text:"すごい成果！",created_at:"2025-11-15T10:00:00"}],profiles:{display_name:"田中 義博",avatar_url:""}},
+    {id:"p2",user_id:"u1",is_public:true,created_at:"2025-12-03T14:00:00",hunting_method:"罠猟",hunting_sub_method:"くくり罠",prey:[{name:"イノシシ",count:1}],dogs:[],stop_methods:[],location_lat:36.74,location_lng:139.59,location_city:"日光市 男体山麓",location_blur:true,environments:["広葉樹","谷"],memo:"くくり罠に雌猪がかかりました。約60kg。",media_urls:[],likes:["u2","u3"],comments:[],profiles:{display_name:"山城 猛",avatar_url:""}},
+    {id:"p4",user_id:"u1",is_public:true,created_at:"2025-12-20T07:00:00",hunting_method:"銃猟",hunting_sub_method:"単独猟",prey:[{name:"ニホンジカ",count:1}],dogs:[{breed:"プロット",name:"クロ",count:1}],stop_methods:["咬み止め"],location_lat:35.55,location_lng:137.95,location_city:"南信州 伊那山地",location_blur:true,environments:["針葉樹"],memo:"犬がうまく追い込んでくれました。",media_urls:[],likes:["u2"],comments:[],profiles:{display_name:"山城 猛",avatar_url:""}},
+  ];
+  demoData.notes=[
+    {id:"n1",user_id:"u1",created_at:"2025-11-20T10:00:00",title:"なぜ尾根が大事なのか",category:"猟場・地形",body:"尾根は動物にとって主要な移動ルートです。\n\n特にシカやイノシシは夜明け前後に尾根を歩いて餌場と休憩場所を往復する習性があります。",likes:["u2","u3"],comments:[{id:"nc1",user_id:"u2",text:"参考になります！",created_at:"2025-11-20T12:00:00"}],profiles:{display_name:"山城 猛",avatar_url:""}},
+    {id:"n2",user_id:"u2",created_at:"2025-12-01T09:00:00",title:"猪犬（プロット）の育て方",category:"猟犬・犬育て",body:"猪犬を育てる上で最も大切なのは「鼻を育てる」ことです。",likes:["u1"],comments:[],profiles:{display_name:"田中 義博",avatar_url:""}},
+  ];
+  demoData.dms=[
+    {id:"dm1",participants:["u1","u2"],messages:[{id:"m1",sender_id:"u2",text:"今度一緒に鴨撃ちしませんか？",created_at:"2025-11-01T09:00:00"},{id:"m2",sender_id:"u1",text:"ぜひ！12月はどうですか？",created_at:"2025-11-01T09:30:00"}]},
+  ];
+}
+
+/* ============================================================
+   Supabase 接続
+============================================================ */
+async function connectSupabase(){
+  const url=document.getElementById('sb-url').value.trim();
+  const key=document.getElementById('sb-key').value.trim();
+  if(!url||!key){showStatus('URLとKeyを入力してください','error');return;}
+  try{
+    sb=window.supabase.createClient(url,key);
+    const {data,error}=await sb.from('profiles').select('id').limit(1);
+    if(error)throw error;
+    localStorage.setItem('sb_url',url);
+    localStorage.setItem('sb_key',key);
+    showStatus('✅ 接続成功！','ok');
+    setTimeout(()=>go('p-login'),800);
+  }catch(e){
+    showStatus('❌ 接続失敗: '+e.message,'error');
+  }
+}
+function showStatus(msg,type){
+  const el=document.getElementById('setup-status');
+  el.textContent=msg;
+  el.style.background=type==='ok'?'rgba(39,174,96,.1)':'rgba(139,58,26,.08)';
+  el.style.color=type==='ok'?'#27ae60':'var(--rust)';
+  el.style.borderColor=type==='ok'?'rgba(39,174,96,.3)':'rgba(139,58,26,.2)';
+}
+function startDemo(){
+  isDemo=true;
+  initDemoData();
+  me=demoData.users[0];
+  document.getElementById('demo-badge').style.display='inline-block';
+  go('p-timeline');
+  showToast('デモモードで起動しました');
+}
+
+/* ============================================================
+   Auth
+============================================================ */
+async function doLogin(){
+  const email=document.getElementById('lu').value.trim();
+  const pass=document.getElementById('lp').value;
+  const e=document.getElementById('lerr');
+  if(isDemo){e.textContent='デモモード中です';e.style.display='block';return;}
+  if(!sb){e.textContent='先に接続設定を完了してください';e.style.display='block';return;}
+  try{
+    const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+    if(error)throw error;
+    const {data:prof}=await sb.from('profiles').select('*').eq('id',data.user.id).single();
+    me={...prof,is_admin:true};
+    e.style.display='none';
+    go('p-timeline');
+  }catch(ex){e.textContent=ex.message;e.style.display='block';}
+}
+async function doReg(){
+  const n=document.getElementById('rn').value.trim();
+  const u=document.getElementById('ru').value.trim();
+  const email=document.getElementById('re').value.trim();
+  const pass=document.getElementById('rp').value;
+  const bio=document.getElementById('rb').value.trim();
+  const e=document.getElementById('rerr');
+  if(!n||!u||!email||!pass){e.textContent='必須項目を入力してください';e.style.display='block';return;}
+  if(!sb){e.textContent='先に接続設定を完了してください';e.style.display='block';return;}
+  try{
+    const {data,error}=await sb.auth.signUp({email,password:pass});
+    if(error)throw error;
+    await sb.from('profiles').insert({id:data.user.id,username:u,display_name:n,bio});
+    const {data:prof}=await sb.from('profiles').select('*').eq('id',data.user.id).single();
+    me={...prof,is_admin:true};
+    e.style.display='none';
+    go('p-timeline');
+    showToast('登録完了！ようこそ');
+  }catch(ex){e.textContent=ex.message;e.style.display='block';}
+}
+async function doLogout(){
+  if(isDemo){me=null;isDemo=false;go('p-setup');return;}
+  if(sb)await sb.auth.signOut();
+  me=null;go('p-login');
+}
+
+/* ============================================================
+   ナビ共通
+============================================================ */
+const ago=s=>{const m=Math.floor((Date.now()-new Date(s))/60000);if(m<1)return"たった今";if(m<60)return`${m}分前`;if(m<1440)return`${Math.floor(m/60)}時間前`;return`${Math.floor(m/1440)}日前`;};
+const fdt=s=>{const d=new Date(s);return`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;};
+function showToast(msg,dur=2200){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';clearTimeout(t._tid);t._tid=setTimeout(()=>t.style.display='none',dur);}
+
+function avHTML(u,sz=38,fn=''){
+  if(!u)return`<div class="av" style="width:${sz}px;height:${sz}px;font-size:${Math.round(sz*.38)}px;">?</div>`;
+  const dn=u.display_name||u.displayName||'?';
+  const av=u.avatar_url||u.avatarUrl||'';
+  const c=fn?`onclick="${fn}" style="cursor:pointer;"`:'';
+  if(av)return`<div class="av" style="width:${sz}px;height:${sz}px;" ${c}><img src="${av}"/></div>`;
+  return`<div class="av" style="width:${sz}px;height:${sz}px;font-size:${Math.round(sz*.38)}px;" ${c}>${dn.charAt(0)}</div>`;
+}
+function bnHTML(act){
+  const hasAdmin=me?.is_admin;
+  const its=[
+    {id:'p-timeline',ic:'🏠',lb:'ホーム'},
+    {id:'p-search',ic:'🔍',lb:'探す'},
+    {id:'p-create',ic:'＋',lb:'投稿'},
+    {id:'p-mapview',ic:'🗺',lb:'猟場マップ'},
+    {id:'p-my',ic:'👤',lb:'マイページ'},
+  ];
+  if(hasAdmin)its.push({id:'p-admin',ic:'⚙',lb:'管理'});
+  const fs=hasAdmin?'7.5':'8.5';
+  const ifs=hasAdmin?'15':'17';
+  return its.map(i=>`<button onclick="go('${i.id}')" style="color:#f2ead8!important;${act===i.id?'opacity:1;':'opacity:0.5;'}flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 0 7px;border:none;background:transparent;cursor:pointer;font-size:${fs}px;gap:3px;font-family:'Noto Serif JP',serif;"><span style="font-size:${ifs}px;line-height:1;">${i.ic}</span><span>${i.lb}</span></button>`).join('');
+}
+function applyFeedTabs(hId,nId,act){
+  [hId,nId].forEach(id=>{const el=document.getElementById(id);if(!el)return;const a=el.id.includes('hunt')?'hunt':'note';el.style.cssText=`color:#f2ead8!important;opacity:${act===a?1:.55};flex:1;padding:8px;border:none;border-radius:5px;cursor:pointer;font-size:13px;font-family:'Noto Serif JP',serif;background:${act===a?'var(--moss)':'transparent'};`;});
+}
+function go(pg,opts={}){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const el=document.getElementById(pg);if(el){el.classList.add('active');el.scrollTop=0;}
+  curP=pg;
+  if(opts.post!==undefined)detailId=opts.post;
+  if(opts.note!==undefined)noteDetailId=opts.note;
+  if(opts.dm!==undefined)dmId=opts.dm;
+  if(opts.user!==undefined)otherId=opts.user;
+  for(let i=1;i<=8;i++){const b=document.getElementById('bn'+i);if(b)b.innerHTML=bnHTML(pg);}
+  const bnd=document.getElementById('bn-nd');if(bnd)bnd.innerHTML=bnHTML(pg);
+  const bna=document.getElementById('bn-admin');if(bna)bna.innerHTML=bnHTML(pg);
+  const bnmv=document.getElementById('bn-mv');if(bnmv)bnmv.innerHTML=bnHTML(pg);
+  if(pg==='p-timeline'){renderTL();applyFeedTabs('ft-hunt','ft-note',feedTab);}
+  else if(pg==='p-detail')renderDetail();
+  else if(pg==='p-note-detail')renderNoteDetail();
+  else if(pg==='p-create'){initCreate();}
+  else if(pg==='p-my')renderMy();
+  else if(pg==='p-search')renderSearch();
+  else if(pg==='p-dms')renderDMs();
+  else if(pg==='p-chat')renderChat();
+  else if(pg==='p-other')renderOther();
+  else if(pg==='p-admin'){renderAdmin();applyAdminTab(adminTab);}
+  else if(pg==='p-mapview')renderMapView();
+}
+
+/* ============================================================
+   データ取得ヘルパー（Supabase / Demo 共通I/F）
+============================================================ */
+async function fetchPosts(){
+  if(isDemo)return demoData.posts.filter(p=>p.is_public).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  const {data}=await sb.from('posts')
+    .select('*,profiles(display_name,avatar_url)')
+    .eq('is_public',true)
+    .order('created_at',{ascending:false});
+  return data||[];
+}
+async function fetchAllPosts(){
+  if(isDemo)return demoData.posts;
+  const {data}=await sb.from('posts').select('*,profiles(display_name,avatar_url)').order('created_at',{ascending:false});
+  return data||[];
+}
+async function fetchNotes(){
+  if(isDemo)return demoData.notes.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  const {data}=await sb.from('notes').select('*,profiles(display_name,avatar_url)').order('created_at',{ascending:false});
+  return data||[];
+}
+async function fetchAllUsers(){
+  if(isDemo)return demoData.users;
+  const {data}=await sb.from('profiles').select('*').order('created_at',{ascending:false});
+  return data||[];
+}
+async function fetchUserById(id){
+  if(isDemo)return demoData.users.find(u=>u.id===id)||null;
+  const {data}=await sb.from('profiles').select('*').eq('id',id).single();
+  return data;
+}
+
+/* ============================================================
+   タイムライン
+============================================================ */
+function setFeedTab(t){feedTab=t;document.getElementById('tl-sub').textContent=t==='hunt'?'タイムライン':'発見・豆知識';applyFeedTabs('ft-hunt','ft-note',t);renderTL();}
+async function renderTL(){
+  const body=document.getElementById('tl-body');
+  body.innerHTML=`<div style="text-align:center;padding:40px 0;color:var(--stone);">読み込み中…</div>`;
+  try{
+    if(feedTab==='hunt'){
+      const posts=await fetchPosts();
+      body.innerHTML=posts.length===0?`<div style="text-align:center;padding:60px 0;color:var(--stone);">投稿がありません</div>`:posts.map(postCard).join('');
+    }else{
+      const notes=await fetchNotes();
+      body.innerHTML=notes.length===0?`<div style="text-align:center;padding:60px 0;color:var(--stone);">ノートがありません</div>`:notes.map(noteCard).join('');
+    }
+  }catch(e){body.innerHTML=`<div style="text-align:center;padding:40px 0;color:var(--rust2);">読み込みエラー: ${e.message}</div>`;}
+}
+
+function getProfileFromPost(p){return p.profiles||{display_name:p.user_id,avatar_url:''};}
+function postCard(post){
+  const prof=getProfileFromPost(post);
+  const liked=Array.isArray(post.likes)&&post.likes.includes(me?.id);
+  const prey=Array.isArray(post.prey)?post.prey:[];
+  const envs=Array.isArray(post.environments)?post.environments:[];
+  const dogs=Array.isArray(post.dogs)?post.dogs:[];
+  const stops=Array.isArray(post.stop_methods)?post.stop_methods:[];
+  const preyT=prey.map(p=>`<span class="prey-tag">🎯 ${p.name} ×${p.count}</span>`).join('')||'';
+  const envT=envs.map(e=>`<span class="env-tag">${e}</span>`).join(' ')||'';
+  const dogT=dogs.length>0?`<div style="font-size:12px;color:var(--moss2);margin-bottom:4px;">🐕 ${dogs.map(d=>`${d.breed}「${d.name}」`).join('、')}</div>`:'';
+  const stopT=stops.length>0?`<div style="margin-bottom:4px;">${stops.map(s=>`<span class="stop-tag">${s}</span>`).join(' ')}</div>`:'';
+  const locT=post.location_blur?'📍 位置非公開':`📍 ${post.location_display||post.location_city||''}`;
+  const privB=!post.is_public?`<span class="priv-badge">記録のみ</span>`:'';
+  const likeCount=Array.isArray(post.likes)?post.likes.length:0;
+  const cmtCount=Array.isArray(post.comments)?post.comments.length:0;
+  return`<div class="card">
+    <div style="display:flex;align-items:center;gap:10px;padding:13px 14px 11px 17px;">
+      ${avHTML(prof,40,`viewUser('${post.user_id}')`)}
+      <div style="flex:1;min-width:0;"><div style="font-weight:500;font-size:14px;color:var(--ink);">${prof.display_name||'?'}${privB}</div><div style="font-size:11px;color:var(--stone);">${ago(post.created_at)}</div></div>
+      <span class="method-badge">${post.hunting_method}${post.hunting_sub_method?'・'+post.hunting_sub_method:''}</span>
+    </div>
+    <div style="padding:0 14px 12px 17px;cursor:pointer;" onclick="viewPost('${post.id}')">
+      <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px;">${preyT}</div>
+      ${dogT}${stopT}
+      ${envT?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px;">${envT}</div>`:''}
+      <div style="font-size:11px;color:var(--stone);margin-bottom:5px;">${locT}</div>
+      ${post.memo?`<p style="font-size:13px;color:var(--ink2);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.6;">${post.memo}</p>`:''}
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;padding:9px 14px 9px 17px;border-top:1px solid var(--earth2);">
+      <button class="like-btn ${liked?'liked':''}" onclick="toggleLike('${post.id}',event)">${liked?'❤':'♡'} ${likeCount}</button>
+      <button style="display:flex;align-items:center;gap:5px;background:none;border:none;cursor:pointer;color:var(--stone);font-size:13px;" onclick="viewPost('${post.id}')">💬 ${cmtCount}</button>
+    </div>
+  </div>`;
+}
+function noteCard(note){
+  const prof=getProfileFromPost(note);
+  const liked=Array.isArray(note.likes)&&note.likes.includes(me?.id);
+  const preview=(note.body||'').replace(/\n/g,' ').substring(0,80)+((note.body||'').length>80?'…':'');
+  const likeCount=Array.isArray(note.likes)?note.likes.length:0;
+  const cmtCount=Array.isArray(note.comments)?note.comments.length:0;
+  return`<div class="note-card" onclick="viewNote('${note.id}')" style="cursor:pointer;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      ${avHTML(prof,36,`viewUser('${note.user_id}')`)}
+      <div style="flex:1;"><div style="font-weight:500;font-size:13px;color:var(--ink);">${prof.display_name||'?'}</div><div style="font-size:11px;color:var(--stone);">${ago(note.created_at)}</div></div>
+      <span class="note-cat">${note.category}</span>
+    </div>
+    <h3 style="font-size:15px;color:var(--ink);margin-bottom:7px;line-height:1.5;">${note.title}</h3>
+    <p style="font-size:13px;color:var(--stone);line-height:1.65;">${preview}</p>
+    <div style="display:flex;align-items:center;gap:14px;margin-top:11px;padding-top:10px;border-top:1px solid var(--earth2);">
+      <button class="like-btn ${liked?'liked':''}" onclick="event.stopPropagation();toggleNoteLike('${note.id}',event)">${liked?'❤':'♡'} ${likeCount}</button>
+      <span style="font-size:12px;color:var(--stone);">💬 ${cmtCount}</span>
+    </div>
+  </div>`;
+}
+
+async function toggleLike(postId,ev){
+  ev&&ev.stopPropagation();
+  if(isDemo){
+    const p=demoData.posts.find(x=>x.id===postId);
+    if(!p)return;
+    const idx=p.likes.indexOf(me.id);
+    if(idx>=0)p.likes.splice(idx,1);else p.likes.push(me.id);
+    renderTL();return;
+  }
+  // Supabase: toggle
+  const {data:existing}=await sb.from('post_likes').select('*').eq('post_id',postId).eq('user_id',me.id).single();
+  if(existing)await sb.from('post_likes').delete().eq('post_id',postId).eq('user_id',me.id);
+  else await sb.from('post_likes').insert({post_id:postId,user_id:me.id});
+  renderTL();
+}
+async function toggleNoteLike(noteId,ev){
+  ev&&ev.stopPropagation();
+  if(isDemo){
+    const n=demoData.notes.find(x=>x.id===noteId);
+    if(!n)return;
+    const idx=n.likes.indexOf(me.id);
+    if(idx>=0)n.likes.splice(idx,1);else n.likes.push(me.id);
+    renderTL();return;
+  }
+  const {data:existing}=await sb.from('note_likes').select('*').eq('note_id',noteId).eq('user_id',me.id).single();
+  if(existing)await sb.from('note_likes').delete().eq('note_id',noteId).eq('user_id',me.id);
+  else await sb.from('note_likes').insert({note_id:noteId,user_id:me.id});
+  renderTL();
+}
+
+function viewPost(id){detailId=id;go('p-detail',{post:id});}
+function viewUser(id){if(id===me?.id)go('p-my');else{otherId=id;go('p-other',{user:id});}}
+function viewNote(id){noteDetailId=id;go('p-note-detail',{note:id});}
+
+/* ============================================================
+   詳細ページ
+============================================================ */
+async function renderDetail(){
+  const body=document.getElementById('d-body');
+  body.innerHTML=`<div style="padding:40px;text-align:center;color:var(--stone);">読み込み中…</div>`;
+  let post;
+  if(isDemo){post=demoData.posts.find(p=>p.id===detailId);}
+  else{const{data}=await sb.from('posts').select('*,profiles(display_name,avatar_url)').eq('id',detailId).single();post=data;}
+  if(!post){body.innerHTML='<p style="padding:20px;">見つかりません</p>';return;}
+  const prof=getProfileFromPost(post);
+  const isAuth=me?.id===post.user_id;
+  const da=document.getElementById('d-auth');
+  if(da)da.innerHTML=isAuth?`<button onclick="delPost('${post.id}')" style="background:none;border:none;color:rgba(255,200,180,.8);cursor:pointer;font-size:18px;padding:4px;">🗑</button>`:'';
+  const prey=Array.isArray(post.prey)?post.prey:[];
+  const envs=Array.isArray(post.environments)?post.environments:[];
+  const dogs=Array.isArray(post.dogs)?post.dogs:[];
+  const stops=Array.isArray(post.stop_methods)?post.stop_methods:[];
+  const cmts=Array.isArray(post.comments)?post.comments:[];
+  const liked=Array.isArray(post.likes)&&post.likes.includes(me?.id);
+  const envT=envs.map(e=>`<span class="env-tag">${e}</span>`).join(' ')||'';
+  const stopH=stops.length>0?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--earth2);"><div style="font-size:11px;color:var(--stone);margin-bottom:4px;">止め方</div><div>${stops.map(s=>`<span class="stop-tag">${s}</span>`).join(' ')}</div></div>`:'';
+  const cmtHTML=cmts.map(c=>`<div style="display:flex;gap:8px;margin-bottom:12px;"><div class="av" style="width:32px;height:32px;font-size:12px;">${(c.user_id||'?').charAt(0)}</div><div style="flex:1;background:var(--earth2);border-radius:8px;padding:8px 12px;border-left:2px solid var(--earth);"><div style="font-size:12px;color:var(--ink);font-weight:500;margin-bottom:3px;">${c.user_id}</div><div style="font-size:13px;color:var(--ink2);line-height:1.6;">${c.text}</div><div style="font-size:10px;color:var(--stone);margin-top:3px;">${ago(c.created_at)}</div></div></div>`).join('');
+  body.innerHTML=`<div style="padding:14px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">${avHTML(prof,44,`viewUser('${post.user_id}')`)}<div><div style="font-size:15px;color:var(--ink);font-weight:500;">${prof.display_name}</div><div style="font-size:11px;color:var(--stone);">${fdt(post.created_at)}</div></div></div>
+    <div style="background:var(--earth4);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--earth);border-left:3px solid var(--moss2);">
+      <div style="font-size:13px;color:var(--moss2);font-weight:500;margin-bottom:10px;">捕獲情報</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;">${prey.map(p=>`<span class="prey-tag">🎯 ${p.name} ×${p.count}</span>`).join('')||''}</div>
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--earth2);"><div style="font-size:11px;color:var(--stone);margin-bottom:4px;">猟法</div><div style="font-size:13px;color:var(--ink2);">${post.hunting_method}${post.hunting_sub_method?' — '+post.hunting_sub_method:''}</div>${dogs.map(d=>`<div style="font-size:13px;color:var(--moss2);margin-top:3px;">🐕 ${d.breed}「${d.name}」${d.count}頭</div>`).join('')}</div>
+      ${stopH}
+      ${(()=>{
+        const blur=post.location_blur;
+        const pref=post.location_pref||'';
+        const city=post.location_city||'';
+        const ward=post.location_ward||'';
+        const area=post.location_area||'';
+        const mtn=post.location_mountain||'';
+        const disp=post.location_display||city||'';
+        if(!pref&&!city&&!mtn&&!disp)return '';
+        const rows=[
+          pref?`<div style="display:flex;gap:8px;margin-bottom:3px;"><span style="font-size:11px;color:var(--stone);min-width:64px;">都道府県</span><span style="font-size:13px;color:var(--ink2);">${pref}</span></div>`:'',
+          (!blur&&city)?`<div style="display:flex;gap:8px;margin-bottom:3px;"><span style="font-size:11px;color:var(--stone);min-width:64px;">市町村</span><span style="font-size:13px;color:var(--ink2);">${city}</span></div>`:'',
+          (!blur&&ward)?`<div style="display:flex;gap:8px;margin-bottom:3px;"><span style="font-size:11px;color:var(--stone);min-width:64px;">区・地区</span><span style="font-size:13px;color:var(--ink2);">${ward}</span></div>`:'',
+          (!blur&&area)?`<div style="display:flex;gap:8px;margin-bottom:3px;"><span style="font-size:11px;color:var(--stone);min-width:64px;">地域名</span><span style="font-size:13px;color:var(--ink2);">${area}</span></div>`:'',
+          (!blur&&mtn)?`<div style="display:flex;gap:8px;margin-bottom:3px;"><span style="font-size:11px;color:var(--stone);min-width:64px;">山・地形</span><span style="font-size:13px;color:var(--ink2);">${mtn}</span></div>`:'',
+        ].filter(Boolean).join('');
+        return`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--earth2);"><div style="font-size:11px;color:var(--stone);margin-bottom:6px;">📍 場所${blur?' (詳細非公開)':''}</div>${rows||`<div style="font-size:13px;color:var(--ink2);">${disp}</div>`}</div>`;
+      })()}
+      ${envT?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--earth2);"><div style="font-size:11px;color:var(--stone);margin-bottom:5px;">環境</div><div>${envT}</div></div>`:''}
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--earth2);"><div style="font-size:11px;color:var(--stone);margin-bottom:4px;">記録メモ</div><div style="font-size:13px;color:var(--ink2);line-height:1.7;">${post.memo||'なし'}</div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;">
+      <button class="like-btn ${liked?'liked':''}" onclick="toggleLike('${post.id}',event)" style="font-size:15px;">${liked?'❤':'♡'} ${Array.isArray(post.likes)?post.likes.length:0} いいね</button>
+      <span style="color:var(--stone);font-size:13px;">💬 ${cmts.length} コメント</span>
+    </div>
+    <div style="background:var(--earth4);border-radius:10px;padding:14px;border:1px solid var(--earth);">
+      <div style="font-size:13px;color:var(--ink);font-weight:500;margin-bottom:12px;">コメント</div>
+      ${cmtHTML}
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">${avHTML(me,32)}
+        <input id="cmt-i" class="inp" placeholder="コメントを追加…" style="flex:1;border-radius:20px;" onkeydown="if(event.key==='Enter')postCmt('${post.id}')"/>
+        <button onclick="postCmt('${post.id}')" style="background:none;border:none;cursor:pointer;color:var(--moss2);font-size:18px;">➤</button>
+      </div>
+    </div>
+  </div>`;
+}
+async function postCmt(postId){
+  const el=document.getElementById('cmt-i');
+  const t=el?.value?.trim();if(!t)return;
+  if(isDemo){
+    const p=demoData.posts.find(x=>x.id===postId);
+    if(p){p.comments.push({id:'c'+Date.now(),user_id:me.id,text:t,created_at:new Date().toISOString()});}
+    el.value='';renderDetail();return;
+  }
+  await sb.from('post_comments').insert({post_id:postId,user_id:me.id,text:t});
+  el.value='';renderDetail();
+}
+async function delPost(postId){
+  if(!confirm('この投稿を削除しますか？'))return;
+  if(isDemo){demoData.posts=demoData.posts.filter(p=>p.id!==postId);}
+  else await sb.from('posts').delete().eq('id',postId);
+  go('p-timeline');showToast('投稿を削除しました');
+}
+
+async function renderNoteDetail(){
+  const body=document.getElementById('nd-body');
+  body.innerHTML=`<div style="padding:40px;text-align:center;color:var(--stone);">読み込み中…</div>`;
+  let note;
+  if(isDemo){note=demoData.notes.find(n=>n.id===noteDetailId);}
+  else{const{data}=await sb.from('notes').select('*,profiles(display_name,avatar_url)').eq('id',noteDetailId).single();note=data;}
+  if(!note){body.innerHTML='<p style="padding:20px;">見つかりません</p>';return;}
+  const prof=getProfileFromPost(note);
+  const isAuth=me?.id===note.user_id;
+  const da=document.getElementById('nd-auth');
+  if(da)da.innerHTML=isAuth?`<button onclick="delNote('${note.id}')" style="background:none;border:none;color:rgba(255,200,180,.8);cursor:pointer;font-size:18px;padding:4px;">🗑</button>`:'';
+  const cmts=Array.isArray(note.comments)?note.comments:[];
+  const liked=Array.isArray(note.likes)&&note.likes.includes(me?.id);
+  body.innerHTML=`<div style="padding:14px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">${avHTML(prof,44)}<div><div style="font-size:15px;color:var(--ink);font-weight:500;">${prof.display_name}</div><div style="font-size:11px;color:var(--stone);">${fdt(note.created_at)}</div></div></div>
+    <span class="note-cat" style="margin-bottom:12px;display:inline-block;">${note.category}</span>
+    <h2 style="font-size:19px;color:var(--ink);margin:10px 0 14px;line-height:1.5;">${note.title}</h2>
+    <div style="font-size:14px;color:var(--ink2);line-height:1.85;background:var(--earth4);border-radius:10px;padding:16px;border:1px solid var(--earth);border-left:3px solid var(--water);margin-bottom:14px;">${(note.body||'').replace(/\n/g,'<br/>')}</div>
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;">
+      <button class="like-btn ${liked?'liked':''}" onclick="toggleNoteLike('${note.id}',event)" style="font-size:15px;">${liked?'❤':'♡'} ${Array.isArray(note.likes)?note.likes.length:0} いいね</button>
+      <span style="color:var(--stone);font-size:13px;">💬 ${cmts.length} コメント</span>
+    </div>
+  </div>`;
+}
+async function delNote(noteId){
+  if(!confirm('このノートを削除しますか？'))return;
+  if(isDemo)demoData.notes=demoData.notes.filter(n=>n.id!==noteId);
+  else await sb.from('notes').delete().eq('id',noteId);
+  go('p-timeline');showToast('ノートを削除しました');
+}
+
+/* ============================================================
+   投稿作成
+============================================================ */
+function setCreateTab(t){createTab=t;applyFeedTabs('ct-hunt','ct-note',t);document.getElementById('create-hunt').style.display=t==='hunt'?'block':'none';document.getElementById('create-note').style.display=t==='note'?'block':'none';}
+function initCreate(){
+  createTab='hunt';cPub='public';cMethod='';cSub='';cEnvs=[];cDogs=[{breed:'',name:'',count:1}];cPrey=[{name:'',count:1}];cMedia=[];cStops=[];cLat=null;cLng=null;cNoteCat='';
+  document.getElementById('create-hunt').style.display='block';document.getElementById('create-note').style.display='none';
+  applyFeedTabs('ct-hunt','ct-note','hunt');
+  document.getElementById('pub-btn').className='chip sel';document.getElementById('rec-btn').className='chip';
+  document.getElementById('pub-desc').textContent='フォロワーのタイムラインに表示されます';
+  const now=new Date();
+  document.getElementById('c-date').value=now.toISOString().split('T')[0];
+  document.getElementById('c-time').value=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  document.getElementById('c-memo').value='';
+  document.getElementById('c-pref').value='';
+  document.getElementById('c-city2').value='';
+  document.getElementById('c-ward').value='';
+  document.getElementById('c-area').value='';
+  document.getElementById('c-mountain').value='';
+  document.getElementById('c-blur').checked=false;
+  document.getElementById('media-preview').innerHTML='';document.getElementById('pin-info').textContent='';
+  document.getElementById('n-title').value='';document.getElementById('n-body').value='';
+  document.getElementById('post-err').style.display='none';
+  renderMethodChips();renderPreyRows();renderDogRows();renderEnvChips();renderNoteCatChips();
+  initGSIMap();
+}
+function initGSIMap(){
+  if(typeof L==='undefined'){setTimeout(initGSIMap,300);return;}
+  const el=document.getElementById('gsi-map');if(!el)return;
+  if(gsiMap){try{gsiMap.off();gsiMap.remove();}catch(e){}gsiMap=null;gsiMarker=null;}
+  el._leaflet_id=undefined;
+  gsiMap=L.map(el,{center:[36.5,138.0],zoom:6,zoomControl:true});
+  L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',{
+    attribution:'<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',maxZoom:18,minZoom:4
+  }).addTo(gsiMap);
+  gsiMap.on('click',function(e){
+    cLat=Math.round(e.latlng.lat*10000)/10000;cLng=Math.round(e.latlng.lng*10000)/10000;
+    if(gsiMarker){gsiMarker.remove();gsiMarker=null;}
+    gsiMarker=L.marker([cLat,cLng]).addTo(gsiMap);
+    const pi=document.getElementById('pin-info');if(pi)pi.textContent=`📍 ピン設定済み (${cLat}, ${cLng})`;
+  });
+  setTimeout(()=>{if(gsiMap)gsiMap.invalidateSize(true);},200);
+}
+function setPub(v){cPub=v;document.getElementById('pub-btn').className=`chip${v==='public'?' sel':''}`;document.getElementById('rec-btn').className=`chip${v==='private'?' sel':''}`;document.getElementById('pub-desc').textContent=v==='public'?'フォロワーのタイムラインに表示されます':'自分だけが見られる記録として保存されます';}
+function renderMethodChips(){
+  document.getElementById('method-chips').innerHTML=Object.keys(HSUBS).map(m=>`<button class="mchip${cMethod===m?' sel':''}" onclick="setMethod('${m}')">${m}</button>`).join('');
+  const sw=document.getElementById('sub-wrap');
+  if(cMethod&&HSUBS[cMethod].length>0){sw.style.display='block';document.getElementById('sub-chips').innerHTML=HSUBS[cMethod].map(s=>`<button class="schip${cSub===s?' sel':''}" onclick="setSub('${s}')">${s}</button>`).join('');}else sw.style.display='none';
+  const stopW=document.getElementById('stop-wrap');
+  if(STOP_REQ.includes(cSub)){stopW.style.display='block';document.getElementById('stop-chips').innerHTML=STOP_METHODS.map(s=>`<button class="chip stopchip${cStops.includes(s)?' sel':''}" onclick="togStop('${s}')">${s}</button>`).join('');}else stopW.style.display='none';
+  document.getElementById('dog-wrap').style.display=DOG_METHODS.includes(cSub)?'block':'none';
+}
+function setMethod(m){cMethod=m;cSub='';cStops=[];renderMethodChips();}
+function setSub(s){cSub=s;cStops=[];renderMethodChips();renderDogRows();}
+function togStop(s){if(cStops.includes(s))cStops=cStops.filter(x=>x!==s);else cStops.push(s);renderMethodChips();}
+function renderEnvChips(){document.getElementById('env-chips').innerHTML=ENVS.map(e=>`<button class="chip${cEnvs.includes(e)?' sel':''}" onclick="togEnv('${e}')">${e}</button>`).join('');}
+function togEnv(e){if(cEnvs.includes(e))cEnvs=cEnvs.filter(x=>x!==e);else cEnvs.push(e);renderEnvChips();}
+function renderPreyRows(){document.getElementById('prey-rows').innerHTML=cPrey.map((p,i)=>`<div style="display:flex;gap:6px;margin-bottom:8px;align-items:center;"><select class="inp" style="flex:2;padding:7px;" onchange="cPrey[${i}].name=this.value"><option value="">獲物を選択</option>${ALL_WL.map(w=>`<option value="${w}" ${p.name===w?'selected':''}>${w}</option>`).join('')}</select><input type="number" value="${p.count}" min="1" class="inp" style="width:58px;padding:7px;" oninput="cPrey[${i}].count=parseInt(this.value)||1"/>${cPrey.length>1?`<button onclick="cPrey.splice(${i},1);renderPreyRows()" style="background:none;border:none;cursor:pointer;color:var(--rust2);font-size:18px;">×</button>`:''}</div>`).join('');}
+function addPrey(){cPrey.push({name:'',count:1});renderPreyRows();}
+function renderDogRows(){document.getElementById('dog-rows').innerHTML=cDogs.map((d,i)=>`<div style="display:flex;gap:6px;margin-bottom:8px;align-items:center;"><input value="${d.breed}" placeholder="犬種（例: プロット）" class="inp" style="flex:2;" oninput="cDogs[${i}].breed=this.value"/><input value="${d.name}" placeholder="名前" class="inp" style="flex:2;" oninput="cDogs[${i}].name=this.value"/><input type="number" value="${d.count}" min="1" class="inp" style="width:50px;padding:7px;" oninput="cDogs[${i}].count=parseInt(this.value)||1"/>${cDogs.length>1?`<button onclick="cDogs.splice(${i},1);renderDogRows()" style="background:none;border:none;cursor:pointer;color:var(--rust2);font-size:18px;">×</button>`:''}</div>`).join('');}
+function addDog(){cDogs.push({breed:'',name:'',count:1});renderDogRows();}
+function renderNoteCatChips(){document.getElementById('note-cat-chips').innerHTML=NOTE_CATS.map(c=>`<button class="chip${cNoteCat===c?' sel':''}" onclick="cNoteCat='${c}';renderNoteCatChips()">${c}</button>`).join('');}
+function handleMedia(inp){Array.from(inp.files).forEach(f=>{const r=new FileReader();r.onload=e=>{const isV=f.type.startsWith('video');cMedia.push({url:e.target.result,type:isV?'video':'image',name:f.name,file:f});renderMediaPreview();};r.readAsDataURL(f);});inp.value='';}
+function renderMediaPreview(){document.getElementById('media-preview').innerHTML=cMedia.map((m,i)=>`<div class="media-thumb">${m.type==='video'?`<div style="width:100%;height:100%;background:var(--bark);display:flex;align-items:center;justify-content:center;color:#f2ead8;font-size:10px;">▶ 動画</div>`:`<img src="${m.url}"/>`}<button class="media-del" onclick="cMedia.splice(${i},1);renderMediaPreview()">×</button></div>`).join('');}
+
+async function submitPost(){
+  const btn=document.getElementById('post-submit-btn');
+  const errEl=document.getElementById('post-err');
+  if(!cMethod){errEl.textContent='猟法を選択してください';errEl.style.display='block';return;}
+  if(cPrey.every(p=>!p.name)){errEl.textContent='獲物を1つ以上選択してください';errEl.style.display='block';return;}
+  btn.disabled=true;btn.textContent='投稿中…';errEl.style.display='none';
+  try{
+    const dt=new Date(`${document.getElementById('c-date').value}T${document.getElementById('c-time').value}`);
+    const pref=document.getElementById('c-pref').value.trim();
+    const city2=document.getElementById('c-city2').value.trim();
+    const ward=document.getElementById('c-ward').value.trim();
+    const area=document.getElementById('c-area').value.trim();
+    const mountain=document.getElementById('c-mountain').value.trim();
+    const blur=document.getElementById('c-blur').checked;
+    // 表示用の場所文字列を組み立て（ぼかし時は都道府県のみ）
+    const locParts=blur?[pref].filter(Boolean):[pref,city2,ward,area,mountain].filter(Boolean);
+    const locationCity=locParts.join(' ');
+    const postData={
+      user_id:me.id,is_public:cPub==='public',
+      hunting_method:cMethod,hunting_sub_method:cSub,
+      prey:cPrey.filter(p=>p.name),dogs:DOG_METHODS.includes(cSub)?cDogs.filter(d=>d.breed):[],
+      stop_methods:STOP_REQ.includes(cSub)?[...cStops]:[],
+      location_lat:cLat,location_lng:cLng,
+      location_pref:pref,location_city:city2,location_ward:ward,
+      location_area:area,location_mountain:mountain,
+      location_display:locationCity,
+      location_blur:blur,
+      environments:[...cEnvs],memo:document.getElementById('c-memo').value,
+      media_urls:[],hunted_at:dt.toISOString()
+    };
+    if(isDemo){
+      const p={...postData,id:'p'+Date.now(),created_at:new Date().toISOString(),likes:[],comments:[],profiles:{display_name:me.display_name,avatar_url:me.avatar_url||''}};
+      demoData.posts.unshift(p);
+    }else{
+      // Supabase Storage に画像をアップロード
+      const mediaUrls=[];
+      for(const m of cMedia){
+        if(m.file&&sb){
+          const path=`${me.id}/${Date.now()}_${m.name}`;
+          const{data}=await sb.storage.from('media').upload(path,m.file);
+          if(data){const{data:url}=sb.storage.from('media').getPublicUrl(path);mediaUrls.push(url.publicUrl);}
+        }
+      }
+      postData.media_urls=mediaUrls;
+      const{error}=await sb.from('posts').insert(postData);
+      if(error)throw error;
+    }
+    go('p-timeline');showToast('投稿しました！');
+  }catch(e){errEl.textContent='エラー: '+e.message;errEl.style.display='block';}
+  finally{btn.disabled=false;btn.textContent='記録を残す';}
+}
+async function submitNote(){
+  const title=document.getElementById('n-title').value.trim();
+  const body=document.getElementById('n-body').value.trim();
+  if(!title||!body){showToast('タイトルと本文を入力してください');return;}
+  if(isDemo){
+    demoData.notes.unshift({id:'n'+Date.now(),user_id:me.id,created_at:new Date().toISOString(),title,category:cNoteCat||'その他',body,likes:[],comments:[],profiles:{display_name:me.display_name,avatar_url:''}});
+  }else{
+    await sb.from('notes').insert({user_id:me.id,title,category:cNoteCat||'その他',body});
+  }
+  feedTab='note';go('p-timeline');showToast('ノートを投稿しました！');
+}
+
+/* ============================================================
+   マイプロフィール
+============================================================ */
+async function renderMy(){
+  me=await fetchUserById(me.id)||me;
+  const myPs=isDemo?demoData.posts.filter(p=>p.user_id===me.id):[];
+  const tot=myPs.reduce((s,p)=>s+(Array.isArray(p.prey)?p.prey.reduce((ss,x)=>ss+x.count,0):0),0);
+  document.getElementById('my-hdr').innerHTML=`
+    <div class="ph-deco">🦌</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;position:relative;">
+      ${avHTML(me,80)}<button class="btn-ghost" onclick="openEdit()" style="align-self:flex-start;">プロフィール編集</button>
+    </div>
+    <div style="margin-bottom:12px;position:relative;">
+      <div style="font-size:20px;color:#f2ead8;">${me.display_name}</div>
+      <div style="font-size:12px;color:rgba(242,234,216,.6);">@${me.username}</div>
+      ${me.bio?`<div style="font-size:13px;color:rgba(242,234,216,.8);margin-top:6px;line-height:1.6;">${me.bio}</div>`:''}
+      ${me.is_admin?`<div style="margin-top:6px;"><span class="badge-admin">管理者</span></div>`:''}
+      <div style="display:flex;gap:20px;margin-top:10px;">
+        <span style="font-size:12px;color:var(--earth2);"><b style="font-size:18px;">${tot}</b> 捕獲</span>
+      </div>
+    </div>
+    <div style="display:flex;border-top:1px solid rgba(255,255,255,.15);">
+      ${['posts','notes','stats'].map(t=>`<button onclick="setMyTab('${t}')" style="flex:1;padding:10px;border:none;background:transparent;cursor:pointer;font-size:12px;font-family:'Noto Serif JP',serif;color:#f2ead8;opacity:${myTab===t?1:.5};border-bottom:2px solid ${myTab===t?'#f2ead8':'transparent'};">${{posts:'投稿',notes:'ノート',stats:'統計'}[t]}</button>`).join('')}
+    </div>`;
+  renderMyBody();
+}
+function setMyTab(t){myTab=t;renderMy();}
+function renderMyBody(){
+  const body=document.getElementById('my-body');
+  if(isDemo){
+    const myPs=demoData.posts.filter(p=>p.user_id===me.id);
+    const myNs=demoData.notes.filter(n=>n.user_id===me.id);
+    if(myTab==='posts')body.innerHTML=myPs.length===0?`<div style="text-align:center;padding:40px 0;color:var(--stone);">まだ投稿がありません</div>`:myPs.map(postCard).join('');
+    else if(myTab==='notes')body.innerHTML=myNs.length===0?`<div style="text-align:center;padding:40px 0;color:var(--stone);">まだノートがありません</div>`:myNs.map(noteCard).join('');
+    else{const tot=myPs.reduce((s,p)=>s+(Array.isArray(p.prey)?p.prey.reduce((ss,x)=>ss+x.count,0):0),0);body.innerHTML=`<div style="display:flex;gap:10px;margin-bottom:14px;"><div class="sc"><div style="font-size:24px;color:var(--moss2);">${tot}</div><div style="font-size:11px;color:var(--stone);">総捕獲数</div></div><div class="sc"><div style="font-size:24px;color:var(--moss2);">${myPs.length}</div><div style="font-size:11px;color:var(--stone);">投稿数</div></div></div>`;}
+  }else{
+    body.innerHTML=`<div style="text-align:center;padding:40px 0;color:var(--stone);">Supabaseから読み込み中…</div>`;
+    (async()=>{
+      if(myTab==='posts'){const{data}=await sb.from('posts').select('*,profiles(display_name,avatar_url)').eq('user_id',me.id).order('created_at',{ascending:false});body.innerHTML=(data||[]).length===0?`<div style="text-align:center;padding:40px 0;color:var(--stone);">まだ投稿がありません</div>`:(data||[]).map(postCard).join('');}
+      else if(myTab==='notes'){const{data}=await sb.from('notes').select('*,profiles(display_name,avatar_url)').eq('user_id',me.id).order('created_at',{ascending:false});body.innerHTML=(data||[]).length===0?`<div style="text-align:center;padding:40px 0;color:var(--stone);">まだノートがありません</div>`:(data||[]).map(noteCard).join('');}
+    })();
+  }
+}
+function openEdit(){document.getElementById('e-name').value=me.display_name;document.getElementById('e-uname').value=me.username;document.getElementById('e-bio').value=me.bio||'';document.getElementById('edit-av').innerHTML=avHTML(me,80);document.getElementById('edit-modal').classList.add('show');newAv=null;}
+function closeEdit(){document.getElementById('edit-modal').classList.remove('show');}
+function handleAv(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{newAv=e.target.result;document.getElementById('edit-av').innerHTML=`<div class="av" style="width:80px;height:80px;margin:0 auto;"><img src="${newAv}"/></div>`;};r.readAsDataURL(f);}
+async function saveProfile(){
+  const n=document.getElementById('e-name').value.trim(),u=document.getElementById('e-uname').value.trim(),b=document.getElementById('e-bio').value.trim();
+  if(!n||!u){alert('必須項目を入力してください');return;}
+  if(isDemo){const i=demoData.users.findIndex(x=>x.id===me.id);if(i>=0){demoData.users[i].display_name=n;demoData.users[i].username=u;demoData.users[i].bio=b;me=demoData.users[i];}}
+  else{await sb.from('profiles').update({display_name:n,username:u,bio:b}).eq('id',me.id);me={...me,display_name:n,username:u,bio:b};}
+  closeEdit();renderMy();showToast('プロフィールを更新しました');
+}
+
+/* ============================================================
+   検索
+============================================================ */
+async function renderSearch(){
+  const q=document.getElementById('sq')?.value?.trim()||'';
+  let users=[];
+  if(isDemo){users=demoData.users.filter(u=>u.id!==me?.id&&(u.display_name.includes(q)||u.username.includes(q)));}
+  else{const{data}=await sb.from('profiles').select('*').neq('id',me.id).ilike('username','%'+q+'%');users=data||[];}
+  document.getElementById('s-body').innerHTML=users.map(u=>`<div style="background:var(--earth4);border-radius:10px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;border:1px solid var(--earth2);">${avHTML(u,42,`viewUser('${u.id}')`)}<div style="flex:1;cursor:pointer;" onclick="viewUser('${u.id}')"><div style="font-size:14px;color:var(--ink);">${u.display_name}</div><div style="font-size:12px;color:var(--stone);">@${u.username}</div>${u.bio?`<div style="font-size:12px;color:var(--stone2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${u.bio}</div>`:''}</div></div>`).join('')||`<div style="text-align:center;padding:40px 0;color:var(--stone);">ユーザーが見つかりません</div>`;}
+
+/* ============================================================
+   DM
+============================================================ */
+async function renderDMs(){
+  const body=document.getElementById('dms-body');
+  if(isDemo){
+    let html=`<div style="font-size:12px;color:var(--ink);margin-bottom:10px;">メッセージ</div>`;
+    demoData.dms.filter(d=>d.participants.includes(me.id)).forEach(dm=>{
+      const oid=dm.participants.find(i=>i!==me.id);
+      const ot=demoData.users.find(u=>u.id===oid);
+      const last=dm.messages[dm.messages.length-1];
+      html+=`<div class="dm-row" onclick="dmId='${dm.id}';go('p-chat',{dm:'${dm.id}'})">${avHTML(ot,42)}<div style="flex:1;min-width:0;"><div style="font-size:14px;color:var(--ink);">${ot?.display_name||'?'}</div>${last?`<div style="font-size:12px;color:var(--stone);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${last.text}</div>`:''}</div></div>`;
+    });
+    body.innerHTML=html;
+  }else{
+    body.innerHTML=`<div style="text-align:center;padding:40px 0;color:var(--stone);">Supabaseから取得中…</div>`;
+  }
+}
+async function renderChat(){
+  const chdr=document.getElementById('chat-hdr');
+  const msgs=document.getElementById('chat-msgs');
+  if(isDemo){
+    const dm=demoData.dms.find(d=>d.id===dmId);if(!dm)return;
+    const oid=dm.participants.find(i=>i!==me.id);
+    const ot=demoData.users.find(u=>u.id===oid);
+    chdr.innerHTML=`<button class="back-btn" onclick="go('p-dms')">←</button>${avHTML(ot,34)}<div style="flex:1;"><div style="color:#f2ead8;font-size:15px;">${ot?.display_name}</div><div style="font-size:11px;color:rgba(242,234,216,.6);">@${ot?.username}</div></div>`;
+    msgs.innerHTML=dm.messages.map(m=>{const isMe=m.sender_id===me.id;return`<div style="display:flex;flex-direction:${isMe?'row-reverse':'row'};align-items:flex-end;gap:8px;margin-bottom:12px;"><div class="${isMe?'msg-me':'msg-ot'}">${m.text}</div></div>`;}).join('');
+    msgs.scrollTop=msgs.scrollHeight;
+    sendLock=false;document.getElementById('send-btn').disabled=false;
+  }
+}
+function sendMsg(){
+  if(sendLock)return;
+  const inp=document.getElementById('chat-inp'),t=inp?.value?.trim();if(!t)return;
+  sendLock=true;document.getElementById('send-btn').disabled=true;
+  if(isDemo){
+    const dm=demoData.dms.find(d=>d.id===dmId);
+    if(dm){dm.messages.push({id:'m'+Date.now(),sender_id:me.id,text:t,created_at:new Date().toISOString()});}
+    inp.value='';renderChat();
+  }
+  setTimeout(()=>{sendLock=false;const b=document.getElementById('send-btn');if(b)b.disabled=false;},300);
+}
+
+/* ============================================================
+   他ユーザープロフィール
+============================================================ */
+async function renderOther(){
+  const t=await fetchUserById(otherId);if(!t)return;
+  const ps=isDemo?demoData.posts.filter(p=>p.user_id===t.id&&p.is_public):[];
+  document.getElementById('ot-hdr').innerHTML=`
+    <div class="ph-deco">⛰</div>
+    <button onclick="go('p-timeline')" style="background:none;border:none;color:#f2ead8;cursor:pointer;margin-bottom:12px;font-size:20px;">←</button>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;">${avHTML(t,80)}</div>
+    <div style="margin-bottom:12px;"><div style="font-size:20px;color:#f2ead8;">${t.display_name}</div><div style="font-size:12px;color:rgba(242,234,216,.6);">@${t.username}</div>${t.bio?`<div style="font-size:13px;color:rgba(242,234,216,.8);margin-top:6px;">${t.bio}</div>`:''}</div>`;
+  document.getElementById('ot-body').innerHTML=ps.length===0?`<div style="text-align:center;padding:40px 0;color:var(--stone);">公開投稿がありません</div>`:ps.map(postCard).join('');
+}
+
+/* ============================================================
+   猟場データビュー
+============================================================ */
+let mvMap=null,mvMarkers=[],mvFilterMethod='all',mvFilterPrey='all',mvTab='map',mvAllPosts=[];
+const mvMethodColor={銃猟:'#2a4a1a',罠猟:'#8b3a1a',網猟:'#2a4a5a'};
+
+async function renderMapView(){
+  const bnnv=document.getElementById('bn-mv');if(bnnv)bnnv.innerHTML=bnHTML('p-mapview');
+  mvAllPosts=await fetchAllPosts();
+  mvUpdate();
+  setTimeout(()=>{
+    if(typeof L==='undefined')return;
+    const el=document.getElementById('mv-map');if(!el)return;
+    if(mvMap){try{mvMap.off();mvMap.remove();}catch(e){}mvMap=null;mvMarkers=[];}
+    el._leaflet_id=undefined;
+    mvMap=L.map(el,{center:[36.5,138.0],zoom:6,zoomControl:true});
+    L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',{
+      attribution:'国土地理院',maxZoom:18,minZoom:4
+    }).addTo(mvMap);
+    mvUpdateMap(mvFiltered());
+    setTimeout(()=>{if(mvMap)mvMap.invalidateSize(true);},200);
+  },300);
+}
+function mvFiltered(){
+  return mvAllPosts.filter(p=>{
+    const mOk=mvFilterMethod==='all'||p.hunting_method===mvFilterMethod;
+    const prey=Array.isArray(p.prey)?p.prey:[];
+    const pOk=mvFilterPrey==='all'||prey.some(x=>x.name===mvFilterPrey);
+    return mOk&&pOk;
+  });
+}
+function mvSetFilter(key,val,el){
+  if(key==='method'){
+    mvFilterMethod=val;
+    document.querySelectorAll('#mv-filter-method .mv-chip').forEach(b=>b.classList.remove('on'));
+  }else{
+    mvFilterPrey=val;
+    document.querySelectorAll('#mv-filter-prey .mv-chip').forEach(b=>b.classList.remove('on'));
+  }
+  el.classList.add('on');
+  mvUpdate();
+}
+function mvUpdate(){
+  const data=mvFiltered();
+  const total=data.reduce((s,r)=>s+(Array.isArray(r.prey)?r.prey.reduce((ss,p)=>ss+(p.count||0),0):0),0);
+  const locs=new Set(data.filter(r=>r.location_city&&!r.location_blur).map(r=>r.location_city)).size;
+  const species=new Set(data.flatMap(r=>Array.isArray(r.prey)?r.prey.map(p=>p.name):[])).size;
+  const el=document.getElementById('mv-count');if(el)el.textContent=`${data.length}件`;
+  const st=document.getElementById('mv-s-total');if(st)st.textContent=total;
+  const sl=document.getElementById('mv-s-loc');if(sl)sl.textContent=locs;
+  const ss=document.getElementById('mv-s-sp');if(ss)ss.textContent=species;
+  mvUpdateMap(data);
+  mvUpdateCharts(data);
+  mvUpdateList(data);
+}
+/* 獲物カテゴリ判定 */
+const PREY_CAT_COLOR={
+  イノシシ:'#8b1a1a',  // 赤茶
+  ニホンジカ:'#1a5c8b', // 青
+  ヒグマ:'#4a2a00',    // 濃茶
+  ツキノワグマ:'#4a2a00',
+};
+const BIRD_NAMES=["マガモ","カルガモ","コガモ","ヨシガモ","ヒドリガモ","オナガガモ","スズガモ","ヤマドリ","キジ","コジュケイ","エゾライチョウ","キジバト","ヒヨドリ","ハシボソガラス","ハシブトガラス","タシギ","ヤマシギ","バン","オオバン"];
+function getPreyCatColor(prey){
+  /* 優先度: 熊 > 猪 > 鹿 > 鳥 > その他 */
+  const names=prey.map(p=>p.name);
+  if(names.some(n=>n.includes('クマ')||n.includes('熊')))return{col:'#5a3000',label:'熊',emoji:'🐻'};
+  if(names.some(n=>n==='イノシシ'))return{col:'#8b1a1a',label:'猪',emoji:'🐗'};
+  if(names.some(n=>n==='ニホンジカ'||n.includes('シカ')))return{col:'#1a5c8b',label:'鹿',emoji:'🦌'};
+  if(names.some(n=>BIRD_NAMES.includes(n)))return{col:'#2a6b3a',label:'鳥',emoji:'🐦'};
+  return{col:'#6b6b6b',label:'その他',emoji:'🎯'};
+}
+
+function mvUpdateMap(data){
+  if(!mvMap)return;
+  mvMarkers.forEach(m=>mvMap.removeLayer(m));mvMarkers=[];
+  data.forEach(r=>{
+    if(r.location_blur||!r.location_lat||!r.location_lng)return;
+    const prey=Array.isArray(r.prey)?r.prey:[];
+    const total=prey.reduce((s,p)=>s+(p.count||0),0);
+    const {col,label,emoji}=getPreyCatColor(prey);
+    const sz=Math.min(12+total*2,26);
+    const icon=L.divIcon({
+      className:'',
+      html:`<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${col};border:2.5px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-size:${Math.round(sz*.55)}px;line-height:1;">${emoji}</div>`,
+      iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]
+    });
+    const locDisplay=[r.location_pref,r.location_city,r.location_ward,r.location_area,r.location_mountain].filter(Boolean).join(' ')||r.location_display||r.location_city||'—';
+    const prof=r.profiles||{display_name:r.user_id||'?'};
+    const preyStr=prey.map(p=>`${p.name}×${p.count}`).join('、')||'—';
+    const envStr=(Array.isArray(r.environments)?r.environments:[]).join('・');
+    const mk=L.marker([r.location_lat,r.location_lng],{icon}).addTo(mvMap);
+    mk.on('click',()=>{
+      const popup=document.getElementById('mv-popup');
+      const content=document.getElementById('mv-popup-content');
+      if(popup&&content){
+        content.innerHTML=`
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+            <span style="font-size:16px;">${emoji}</span>
+            <span style="font-size:13px;font-weight:500;color:var(--ink);">${preyStr}</span>
+          </div>
+          <div style="color:var(--moss2);font-size:11px;margin-bottom:3px;">🏹 ${r.hunting_method}${r.hunting_sub_method?'・'+r.hunting_sub_method:''}</div>
+          <div style="color:var(--stone);font-size:11px;margin-bottom:3px;">📍 ${locDisplay}${envStr?'　🌲 '+envStr:''}</div>
+          <div style="color:var(--stone);font-size:11px;">👤 ${prof.display_name}　📅 ${(r.hunted_at||r.created_at||'').slice(0,10)}</div>
+          ${r.memo?`<div style="color:var(--ink2);font-size:11px;margin-top:4px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${r.memo}</div>`:''}`;
+        popup.style.display='block';
+      }
+    });
+    mvMarkers.push(mk);
+  });
+}
+function mvBarChart(id,items,color){
+  const el=document.getElementById(id);if(!el)return;
+  const max=Math.max(...items.map(i=>i.val),1);
+  el.innerHTML=items.length===0?`<div style="color:var(--stone);font-size:12px;text-align:center;padding:10px 0;">データなし</div>`:
+  items.map(i=>`<div class="mv-bar-row"><div class="mv-bar-lbl">${i.lbl}</div><div class="mv-bar-track"><div class="mv-bar-fill" style="width:${Math.round(i.val/max*100)}%;background:${color};"></div></div><div class="mv-bar-val">${i.val}</div></div>`).join('');
+}
+function mvUpdateCharts(data){
+  /* どこで何が獲れたか */
+  const locPreyMap={};
+  data.forEach(r=>{
+    const locKey=[r.location_pref,r.location_city,r.location_ward,r.location_area,r.location_mountain].filter(Boolean).join(' ')||r.location_display||r.location_city||null;
+    if(!locKey||r.location_blur)return;
+    if(!locPreyMap[locKey])locPreyMap[locKey]={猪:0,鹿:0,熊:0,鳥類:0,その他:0};
+    (Array.isArray(r.prey)?r.prey:[]).forEach(p=>{
+      const n=p.name;const c=p.count||0;
+      if(n==='イノシシ')locPreyMap[locKey].猪+=c;
+      else if(n==='ニホンジカ'||n.includes('シカ'))locPreyMap[locKey].鹿+=c;
+      else if(n.includes('クマ')||n.includes('熊'))locPreyMap[locKey].熊+=c;
+      else if(BIRD_NAMES.includes(n))locPreyMap[locKey].鳥類+=c;
+      else locPreyMap[locKey].その他+=c;
+    });
+  });
+  const locEl=document.getElementById('mv-chart-location');
+  if(locEl){
+    const cats=['猪','鹿','熊','鳥類','その他'];
+    const catColors={猪:'#8b1a1a',鹿:'#1a5c8b',熊:'#4a2a00',鳥類:'#2a6b3a',その他:'#6b6b6b'};
+    const catEmoji={猪:'🐗',鹿:'🦌',熊:'🐻',鳥類:'🐦',その他:'🎯'};
+    const rows=Object.entries(locPreyMap).sort((a,b)=>{
+      const ta=Object.values(a[1]).reduce((s,v)=>s+v,0);
+      const tb=Object.values(b[1]).reduce((s,v)=>s+v,0);
+      return tb-ta;
+    }).slice(0,12);
+    if(rows.length===0){locEl.innerHTML=`<div style="color:var(--stone);font-size:12px;text-align:center;padding:10px 0;">位置情報付きの記録がありません</div>`;}
+    else{
+      locEl.innerHTML=`
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--earth2);">
+              <th style="text-align:left;padding:4px 6px;color:var(--stone);font-weight:500;font-size:11px;">猟場</th>
+              ${cats.map(c=>`<th style="text-align:center;padding:4px 4px;color:${catColors[c]};font-size:13px;">${catEmoji[c]}</th>`).join('')}
+              <th style="text-align:right;padding:4px 6px;color:var(--stone);font-weight:500;font-size:11px;">計</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(([loc,counts],idx)=>{
+              const total=Object.values(counts).reduce((s,v)=>s+v,0);
+              return`<tr style="border-bottom:1px solid var(--earth2);background:${idx%2===0?'transparent':'rgba(0,0,0,.02)'};">
+                <td style="padding:6px 6px;color:var(--ink2);font-size:11px;max-width:100px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;" title="${loc}">${loc}</td>
+                ${cats.map(c=>`<td style="text-align:center;padding:6px 4px;color:${counts[c]>0?catColors[c]:'var(--earth2)'};font-weight:${counts[c]>0?'500':'400'};">${counts[c]>0?counts[c]:'—'}</td>`).join('')}
+                <td style="text-align:right;padding:6px 6px;color:var(--ink);font-weight:500;">${total}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>`;
+    }
+  }
+  /* 獲物別 */
+  const preyMap={};
+  data.forEach(r=>(Array.isArray(r.prey)?r.prey:[]).forEach(p=>{preyMap[p.name]=(preyMap[p.name]||0)+(p.count||0);}));
+  mvBarChart('mv-chart-prey',Object.entries(preyMap).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([lbl,val])=>({lbl,val})),'#2a4a1a');
+  /* 猟法別 */
+  const mMap={};data.forEach(r=>{mMap[r.hunting_method]=(mMap[r.hunting_method]||0)+1;});
+  mvBarChart('mv-chart-method',Object.entries(mMap).sort((a,b)=>b[1]-a[1]).map(([lbl,val])=>({lbl,val})),'#8b3a1a');
+  /* 環境別 */
+  const eMap={};data.forEach(r=>(Array.isArray(r.environments)?r.environments:[]).forEach(e=>{eMap[e]=(eMap[e]||0)+(Array.isArray(r.prey)?r.prey.reduce((s,p)=>s+(p.count||0),0):0);}));
+  mvBarChart('mv-chart-env',Object.entries(eMap).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([lbl,val])=>({lbl,val})),'#2a4a5a');
+  /* 月別 */
+  const moMap={};
+  data.forEach(r=>{
+    const dt=r.hunted_at||r.created_at||'';
+    if(dt.length>=7){const mo=dt.slice(0,7);moMap[mo]=(moMap[mo]||0)+(Array.isArray(r.prey)?r.prey.reduce((s,p)=>s+(p.count||0),0):0);}
+  });
+  const moItems=Object.entries(moMap).sort((a,b)=>a[0]>b[0]?1:-1).slice(-12).map(([lbl,val])=>({lbl:lbl.slice(2),val}));
+  mvBarChart('mv-chart-month',moItems,'#5c3820');
+}
+function mvUpdateList(data){
+  const el=document.getElementById('mv-record-list');if(!el)return;
+  if(data.length===0){el.innerHTML=`<div style="text-align:center;padding:40px 0;color:var(--stone);">該当する記録がありません</div>`;return;}
+  el.innerHTML=data.map(r=>{
+    const prof=r.profiles||{display_name:r.user_id||'?'};
+    const prey=Array.isArray(r.prey)?r.prey:[];
+    const envs=Array.isArray(r.environments)?r.environments:[];
+    const preyStr=prey.map(p=>`${p.name}×${p.count}`).join('、')||'—';
+    const locStr=[r.location_pref,r.location_city,r.location_ward,r.location_area,r.location_mountain].filter(Boolean).join(' ')||r.location_display||r.location_city||'—';
+    return`<div style="background:var(--earth4);border-radius:10px;padding:12px 14px;margin-bottom:10px;border:1px solid var(--earth2);border-left:3px solid ${mvMethodColor[r.hunting_method]||'var(--stone)'};">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+        <div style="font-size:14px;font-weight:500;color:var(--ink);">${preyStr}</div>
+        <span class="method-badge">${r.hunting_method}${r.hunting_sub_method?'・'+r.hunting_sub_method:''}</span>
+      </div>
+      <div style="font-size:11px;color:var(--stone);margin-bottom:4px;">📍 ${r.location_blur?'位置非公開':locStr} &nbsp;·&nbsp; 📅 ${(r.hunted_at||r.created_at||'').slice(0,10)}</div>
+      <div style="font-size:11px;color:var(--stone);margin-bottom:4px;">👤 ${prof.display_name||r.user_id} &nbsp;·&nbsp; 🌲 ${envs.join('・')||'—'}</div>
+      ${r.memo?`<div style="font-size:12px;color:var(--ink2);margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${r.memo}</div>`:''}
+    </div>`;
+  }).join('');
+}
+function mvSwitchTab(tab,el){
+  mvTab=tab;
+  document.querySelectorAll('.mv-tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('mv-view-map').style.display=tab==='map'?'block':'none';
+  document.getElementById('mv-view-chart').style.display=tab==='chart'?'block':'none';
+  document.getElementById('mv-view-list').style.display=tab==='list'?'block':'none';
+  if(tab==='map'&&mvMap)setTimeout(()=>mvMap.invalidateSize(true),50);
+}
+
+/* ============================================================
+   管理者パネル
+============================================================ */
+function applyAdminTab(t){
+  adminTab=t;
+  ['stats','posts','users','notes'].forEach(tab=>{
+    const el=document.getElementById('at-'+tab);
+    if(el)el.style.opacity=tab===t?'1':'0.55';
+  });
+  renderAdmin();
+}
+function setAdminTab(t){applyAdminTab(t);}
+async function renderAdmin(){
+  if(!me?.is_admin){document.getElementById('admin-body').innerHTML=`<div style="text-align:center;padding:60px 20px;color:var(--rust2);">管理者権限がありません</div>`;return;}
+  const body=document.getElementById('admin-body');
+  body.innerHTML=`<div style="text-align:center;padding:30px 0;color:var(--stone);">読み込み中…</div>`;
+  try{
+    if(adminTab==='stats'){await renderAdminStats(body);}
+    else if(adminTab==='posts'){await renderAdminPosts(body);}
+    else if(adminTab==='users'){await renderAdminUsers(body);}
+    else if(adminTab==='notes'){await renderAdminNotes(body);}
+  }catch(e){body.innerHTML=`<div style="text-align:center;padding:40px 0;color:var(--rust2);">エラー: ${e.message}</div>`;}
+}
+async function renderAdminStats(body){
+  const posts=await fetchAllPosts();
+  const users=await fetchAllUsers();
+  const notes=await fetchNotes();
+  const totalPrey=posts.reduce((s,p)=>s+(Array.isArray(p.prey)?p.prey.reduce((ss,x)=>ss+(x.count||0),0):0),0);
+  const pubPosts=posts.filter(p=>p.is_public).length;
+  const privPosts=posts.filter(p=>!p.is_public).length;
+  // 獲物ランキング
+  const preyMap={};
+  posts.forEach(p=>(Array.isArray(p.prey)?p.prey:[]).forEach(x=>{preyMap[x.name]=(preyMap[x.name]||0)+(x.count||0);}));
+  const preyRank=Object.entries(preyMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const mx=preyRank.length>0?preyRank[0][1]:1;
+  body.innerHTML=`
+    <div style="padding:14px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+        ${[['総ユーザー数',users.length,'👤'],['総投稿数',posts.length,'📝'],['公開投稿',pubPosts,'🌐'],['非公開投稿',privPosts,'🔒'],['総捕獲数',totalPrey,'🎯'],['ノート数',notes.length,'📖']].map(([l,v,ic])=>`<div style="background:var(--earth4);border-radius:10px;padding:14px;text-align:center;border:1px solid var(--earth2);border-left:3px solid var(--admin);"><div style="font-size:22px;margin-bottom:4px;">${ic}</div><div style="font-size:22px;font-weight:700;color:var(--admin);">${v}</div><div style="font-size:11px;color:var(--stone);">${l}</div></div>`).join('')}
+      </div>
+      <div style="background:var(--earth4);border-radius:10px;padding:14px;border:1px solid var(--earth2);">
+        <div style="font-size:13px;color:var(--ink);font-weight:500;margin-bottom:12px;">🏆 捕獲数ランキング</div>
+        ${preyRank.map(([name,val])=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><div style="width:90px;font-size:12px;color:var(--ink2);flex-shrink:0;">${name}</div><div style="flex:1;background:var(--earth2);border-radius:3px;height:14px;overflow:hidden;"><div style="height:100%;background:var(--admin);border-radius:3px;width:${Math.round(val/mx*100)}%;"></div></div><div style="width:28px;font-size:12px;color:var(--admin);font-weight:500;text-align:right;">${val}</div></div>`).join('') || '<div style="color:var(--stone);font-size:13px;">データなし</div>'}
+      </div>
+    </div>`;
+}
+async function renderAdminPosts(body){
+  const posts=await fetchAllPosts();
+  body.innerHTML=`<div style="padding:14px;">
+    <div style="font-size:13px;color:var(--ink);margin-bottom:10px;">全投稿 (${posts.length}件) — 非公開含む</div>
+    ${posts.map(p=>{
+      const prof=getProfileFromPost(p);
+      const prey=Array.isArray(p.prey)?p.prey:[];
+      return`<div class="admin-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          ${avHTML(prof,30)}
+          <div style="flex:1;min-width:0;"><div style="font-size:12px;color:var(--ink);font-weight:500;">${prof.display_name||p.user_id}</div><div style="font-size:10px;color:var(--stone);">${ago(p.created_at)} ${!p.is_public?'<span class="priv-badge">非公開</span>':''}</div></div>
+          <span class="method-badge" style="font-size:10px;">${p.hunting_method}</span>
+          <button class="btn-danger" style="padding:4px 10px;font-size:11px;" onclick="adminDelPost('${p.id}')">削除</button>
+        </div>
+        <div style="font-size:12px;color:var(--ink2);">${prey.map(x=>`${x.name}×${x.count}`).join('、')||'—'}</div>
+        ${p.memo?`<div style="font-size:11px;color:var(--stone);margin-top:4px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${p.memo}</div>`:''}
+      </div>`;
+    }).join('')||'<div style="text-align:center;padding:40px 0;color:var(--stone);">投稿がありません</div>'}
+  </div>`;
+}
+async function renderAdminUsers(body){
+  const users=await fetchAllUsers();
+  body.innerHTML=`<div style="padding:14px;">
+    <div style="font-size:13px;color:var(--ink);margin-bottom:10px;">全ユーザー (${users.length}人)</div>
+    ${users.map(u=>`<div class="admin-card" style="border-left-color:${u.is_admin?'var(--admin)':'var(--earth)'};display:flex;align-items:center;gap:10px;">
+      ${avHTML(u,40)}
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;color:var(--ink);font-weight:500;">${u.display_name}${u.is_admin?`<span class="badge-admin">管理者</span>`:''}</div>
+        <div style="font-size:11px;color:var(--stone);">@${u.username}</div>
+        ${u.bio?`<div style="font-size:11px;color:var(--stone2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${u.bio}</div>`:''}
+      </div>
+      ${!u.is_admin?`<button onclick="adminToggleAdmin('${u.id}',true)" style="font-size:10px;padding:4px 8px;background:var(--admin);color:#f2ead8;border:none;border-radius:4px;cursor:pointer;">管理者に</button>`:`<button onclick="adminToggleAdmin('${u.id}',false)" style="font-size:10px;padding:4px 8px;background:var(--stone);color:#f2ead8;border:none;border-radius:4px;cursor:pointer;">解除</button>`}
+    </div>`).join('')}
+  </div>`;
+}
+async function renderAdminNotes(body){
+  const notes=await fetchNotes();
+  body.innerHTML=`<div style="padding:14px;">
+    <div style="font-size:13px;color:var(--ink);margin-bottom:10px;">全ノート (${notes.length}件)</div>
+    ${notes.map(n=>{const prof=getProfileFromPost(n);return`<div class="admin-card" style="border-left-color:var(--water);">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        ${avHTML(prof,30)}
+        <div style="flex:1;min-width:0;"><div style="font-size:12px;color:var(--ink);font-weight:500;">${prof.display_name||n.user_id}</div><div style="font-size:10px;color:var(--stone);">${ago(n.created_at)}</div></div>
+        <span class="note-cat" style="font-size:10px;">${n.category}</span>
+        <button class="btn-danger" style="padding:4px 10px;font-size:11px;" onclick="adminDelNote('${n.id}')">削除</button>
+      </div>
+      <div style="font-size:13px;color:var(--ink);font-weight:500;">${n.title}</div>
+    </div>`;}).join('')||'<div style="text-align:center;padding:40px 0;color:var(--stone);">ノートがありません</div>'}
+  </div>`;
+}
+async function adminDelPost(id){
+  if(!confirm('この投稿を削除しますか？'))return;
+  if(isDemo)demoData.posts=demoData.posts.filter(p=>p.id!==id);
+  else await sb.from('posts').delete().eq('id',id);
+  renderAdmin();showToast('投稿を削除しました');
+}
+async function adminDelNote(id){
+  if(!confirm('このノートを削除しますか？'))return;
+  if(isDemo)demoData.notes=demoData.notes.filter(n=>n.id!==id);
+  else await sb.from('notes').delete().eq('id',id);
+  renderAdmin();showToast('ノートを削除しました');
+}
+async function adminToggleAdmin(userId,val){
+  if(isDemo){const u=demoData.users.find(x=>x.id===userId);if(u)u.is_admin=val;}
+  else await sb.from('profiles').update({is_admin:val}).eq('id',userId);
+  renderAdmin();showToast(val?'管理者権限を付与しました':'管理者権限を解除しました');
+}
+
+/* ============================================================
+   起動時の復元
+============================================================ */
+window.addEventListener('load',()=>{
+  const url=localStorage.getItem('sb_url');
+  const key=localStorage.getItem('sb_key');
+  if(url&&key){
+    document.getElementById('sb-url').value=url;
+    document.getElementById('sb-key').value=key;
+    sb=window.supabase.createClient(url,key);
+    // セッション確認
+    sb.auth.getSession().then(({data})=>{
+      if(data.session){
+        sb.from('profiles').select('*').eq('id',data.session.user.id).single().then(({data:prof})=>{
+          if(prof){me=prof;go('p-timeline');}else go('p-login');
+        });
+      }else go('p-login');
+    });
+  }
+});
+document.getElementById('lp')?.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+document.getElementById('edit-modal')?.addEventListener('click',e=>{if(e.target===document.getElementById('edit-modal'))closeEdit();});
+</script>
+</body>
+</html>
