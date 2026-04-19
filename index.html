@@ -570,7 +570,7 @@ async function doLogout(){
 ============================================================ */
 const ago=s=>{const m=Math.floor((Date.now()-new Date(s))/60000);if(m<1)return"たった今";if(m<60)return`${m}分前`;if(m<1440)return`${Math.floor(m/60)}時間前`;return`${Math.floor(m/1440)}日前`;};
 const fdt=s=>{const d=new Date(s);return`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;};
-function showToast(msg,dur=2200){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';clearTimeout(t._tid);t._tid=setTimeout(()=>t.style.display='none',dur);}
+function showToast(msg,dur){if(!dur)dur=2200;const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';clearTimeout(t._tid);t._tid=setTimeout(()=>t.style.display='none',dur);}
 
 function avHTML(u,sz=38,fn=''){
   if(!u)return`<div class="av" style="width:${sz}px;height:${sz}px;font-size:${Math.round(sz*.38)}px;">?</div>`;
@@ -627,11 +627,13 @@ function go(pg,opts={}){
 ============================================================ */
 async function fetchPosts(){
   if(isDemo)return demoData.posts.filter(p=>p.is_public).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
-  const {data}=await sb.from('posts')
+  // 公開投稿 + 自分の投稿（非公開含む）を取得
+  const {data,error}=await sb.from('posts')
     .select('*,profiles(display_name,avatar_url)')
-    .eq('is_public',true)
     .order('created_at',{ascending:false});
-  return data||[];
+  if(error){console.error('fetchPosts error:',error);showToast('投稿読み込みエラー: '+error.message,4000);}
+  // 公開 or 自分の投稿だけ表示
+  return (data||[]).filter(p=>p.is_public||p.user_id===me?.id);
 }
 async function fetchAllPosts(){
   if(isDemo)return demoData.posts;
@@ -669,7 +671,10 @@ async function renderTL(){
       const notes=await fetchNotes();
       body.innerHTML=notes.length===0?`<div style="text-align:center;padding:60px 0;color:var(--stone);">ノートがありません</div>`:notes.map(noteCard).join('');
     }
-  }catch(e){body.innerHTML=`<div style="text-align:center;padding:40px 0;color:var(--rust2);">読み込みエラー: ${e.message}</div>`;}
+  }catch(e){
+    console.error('renderTL error:',e);
+    body.innerHTML=`<div style="text-align:center;padding:40px 20px;color:var(--rust2);">読み込みエラー: ${e.message}<br><small style="font-size:10px;color:var(--stone);">ログアウトして再ログインしてください</small></div>`;
+  }
 }
 
 function getProfileFromPost(p){return p.profiles||{display_name:p.user_id,avatar_url:''};}
@@ -989,7 +994,11 @@ async function submitPost(){
       if(error)throw error;
     }
     go('p-timeline');showToast('投稿しました！');
-  }catch(e){errEl.textContent='エラー: '+e.message;errEl.style.display='block';}
+  }catch(e){
+    console.error('submitPost error:',e);
+    errEl.textContent='投稿エラー: '+( e.message||JSON.stringify(e));
+    errEl.style.display='block';
+  }
   finally{btn.disabled=false;btn.textContent='記録を残す';}
 }
 async function submitNote(){
@@ -1042,7 +1051,11 @@ function renderMyBody(){
   }else{
     body.innerHTML=`<div style="text-align:center;padding:40px 0;color:var(--stone);">Supabaseから読み込み中…</div>`;
     (async()=>{
-      if(myTab==='posts'){const{data}=await sb.from('posts').select('*,profiles(display_name,avatar_url)').eq('user_id',me.id).order('created_at',{ascending:false});body.innerHTML=(data||[]).length===0?`<div style="text-align:center;padding:40px 0;color:var(--stone);">まだ投稿がありません</div>`:(data||[]).map(postCard).join('');}
+      if(myTab==='posts'){
+        const{data,error}=await sb.from('posts').select('*,profiles(display_name,avatar_url)').eq('user_id',me.id).order('created_at',{ascending:false});
+        if(error){body.innerHTML=`<div style="text-align:center;padding:40px 0;color:var(--rust2);">エラー: ${error.message}</div>`;}
+        else body.innerHTML=(data||[]).length===0?`<div style="text-align:center;padding:40px 0;color:var(--stone);">まだ投稿がありません</div>`:(data||[]).map(postCard).join('');
+      }
       else if(myTab==='notes'){const{data}=await sb.from('notes').select('*,profiles(display_name,avatar_url)').eq('user_id',me.id).order('created_at',{ascending:false});body.innerHTML=(data||[]).length===0?`<div style="text-align:center;padding:40px 0;color:var(--stone);">まだノートがありません</div>`:(data||[]).map(noteCard).join('');}
     })();
   }
