@@ -656,10 +656,15 @@ async function fetchPosts(){
     .order('created_at',{ascending:false});
   if(error){console.error('fetchPosts error:',error);showToast('投稿読み込みエラー: '+error.message,4000);}
   const posts=(data||[]).filter(p=>p.is_public||p.user_id===me?.id);
-  // profiles情報を別途取得してマージ
+  // profiles情報といいね数を別途取得
   for(const p of posts){
     const{data:prof}=await sb.from('profiles').select('display_name,avatar_url').eq('id',p.user_id).single();
     p.profiles=prof||{display_name:p.user_id,avatar_url:''};
+    // いいね数取得
+    const{count:lc}=await sb.from('post_likes').select('*',{count:'exact',head:true}).eq('post_id',p.id);
+    const{data:myLike}=await sb.from('post_likes').select('post_id').eq('post_id',p.id).eq('user_id',me?.id||'').maybeSingle();
+    p.likes=Array(lc??0).fill('');
+    if(myLike&&me)p.likes[0]=me.id;// 自分のいいねを先頭に
   }
   return posts;
 }
@@ -775,32 +780,26 @@ function noteCard(note){
 }
 
 async function toggleLike(postId,ev){
-  ev&&ev.stopPropagation();
+  if(ev){ev.stopPropagation();ev.preventDefault();}
   if(!me){showToast('ログインが必要です');return;}
+  const btn=document.getElementById('like-'+postId);
   if(isDemo){
     const p=demoData.posts.find(x=>x.id===postId);
     if(!p)return;
     const idx=p.likes.indexOf(me.id);
-    if(idx>=0)p.likes.splice(idx,1);else p.likes.push(me.id);
-    // ボタンをすぐ更新
-    const btn=document.getElementById('like-'+postId);
-    if(btn){const liked=p.likes.includes(me.id);btn.className='like-btn'+(liked?' liked':'');btn.innerHTML=(liked?'❤':'♡')+' '+p.likes.length;}
+    const nowLiked=idx<0;
+    if(nowLiked)p.likes.push(me.id);else p.likes.splice(idx,1);
+    if(btn){btn.className='like-btn'+(nowLiked?' liked':'');btn.innerHTML=(nowLiked?'❤':'♡')+' '+p.likes.length;}
     return;
   }
   try{
-    // 現在のいいね状態を確認
-    const{data:existing}=await sb.from('post_likes').select('id').eq('post_id',postId).eq('user_id',me.id).maybeSingle();
-    if(existing){
-      await sb.from('post_likes').delete().eq('post_id',postId).eq('user_id',me.id);
-    }else{
-      await sb.from('post_likes').insert({post_id:postId,user_id:me.id});
-    }
-    // いいね数を取得してボタン更新
+    const{data:ex}=await sb.from('post_likes').select('post_id').eq('post_id',postId).eq('user_id',me.id).maybeSingle();
+    const nowLiked=!ex;
+    if(ex){await sb.from('post_likes').delete().eq('post_id',postId).eq('user_id',me.id);}
+    else{await sb.from('post_likes').insert({post_id:postId,user_id:me.id});}
     const{count}=await sb.from('post_likes').select('*',{count:'exact',head:true}).eq('post_id',postId);
-    const liked=!existing;
-    const btn=document.getElementById('like-'+postId);
-    if(btn){btn.className='like-btn'+(liked?' liked':'');btn.innerHTML=(liked?'❤':'♡')+' '+(count||0);}
-  }catch(e){console.error('toggleLike error:',e);}
+    if(btn){btn.className='like-btn'+(nowLiked?' liked':'');btn.innerHTML=(nowLiked?'❤':'♡')+' '+(count??0);}
+  }catch(e){console.error('like error:',e);showToast('エラー: '+e.message);}
 }
 async function toggleNoteLike(noteId,ev){
   ev&&ev.stopPropagation();
@@ -1048,15 +1047,8 @@ async function submitPost(){
       const p={...postData,id:'p'+Date.now(),created_at:new Date().toISOString(),likes:[],comments:[],profiles:{display_name:me.display_name,avatar_url:me.avatar_url||''}};
       demoData.posts.unshift(p);
     }else{
-      // Supabase Storage に画像をアップロード
-      const mediaUrls=[];
-      for(const m of cMedia){
-        if(m.file&&sb){
-          const path=`${me.id}/${Date.now()}_${m.name}`;
-          const{data}=await sb.storage.from('media').upload(path,m.file);
-          if(data){const{data:url}=sb.storage.from('media').getPublicUrl(path);mediaUrls.push(url.publicUrl);}
-        }
-      }
+      // 写真をBase64でDBに直接保存
+      const mediaUrls=cMedia.map(m=>m.url).filter(Boolean);
       postData.media_urls=mediaUrls;
       const{error}=await sb.from('posts').insert(postData);
       if(error)throw error;
