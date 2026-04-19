@@ -790,7 +790,14 @@ async function renderDetail(){
   body.innerHTML=`<div style="padding:40px;text-align:center;color:var(--stone);">読み込み中…</div>`;
   let post;
   if(isDemo){post=demoData.posts.find(p=>p.id===detailId);}
-  else{const{data}=await sb.from('posts').select('*,profiles(display_name,avatar_url)').eq('id',detailId).single();post=data;}
+  else{
+    const{data}=await sb.from('posts').select('*').eq('id',detailId).single();
+    if(data){
+      const{data:prof}=await sb.from('profiles').select('display_name,avatar_url').eq('id',data.user_id).single();
+      data.profiles=prof||{display_name:data.user_id,avatar_url:''};
+    }
+    post=data;
+  }
   if(!post){body.innerHTML='<p style="padding:20px;">見つかりません</p>';return;}
   const prof=getProfileFromPost(post);
   const isAuth=me?.id===post.user_id;
@@ -870,7 +877,14 @@ async function renderNoteDetail(){
   body.innerHTML=`<div style="padding:40px;text-align:center;color:var(--stone);">読み込み中…</div>`;
   let note;
   if(isDemo){note=demoData.notes.find(n=>n.id===noteDetailId);}
-  else{const{data}=await sb.from('notes').select('*,profiles(display_name,avatar_url)').eq('id',noteDetailId).single();note=data;}
+  else{
+    const{data}=await sb.from('notes').select('*').eq('id',noteDetailId).single();
+    if(data){
+      const{data:prof}=await sb.from('profiles').select('display_name,avatar_url').eq('id',data.user_id).single();
+      data.profiles=prof||{display_name:data.user_id,avatar_url:''};
+    }
+    note=data;
+  }
   if(!note){body.innerHTML='<p style="padding:20px;">見つかりません</p>';return;}
   const prof=getProfileFromPost(note);
   const isAuth=me?.id===note.user_id;
@@ -1075,7 +1089,12 @@ function renderMyBody(){
           body.innerHTML=posts.length===0?`<div style="text-align:center;padding:40px 0;color:var(--stone);">まだ投稿がありません</div>`:posts.map(postCard).join('');
         }
       }
-      else if(myTab==='notes'){const{data}=await sb.from('notes').select('*,profiles(display_name,avatar_url)').eq('user_id',me.id).order('created_at',{ascending:false});body.innerHTML=(data||[]).length===0?`<div style="text-align:center;padding:40px 0;color:var(--stone);">まだノートがありません</div>`:(data||[]).map(noteCard).join('');}
+      else if(myTab==='notes'){
+        const{data}=await sb.from('notes').select('*').eq('user_id',me.id).order('created_at',{ascending:false});
+        const notes=data||[];
+        notes.forEach(n=>{n.profiles={display_name:me.display_name,avatar_url:me.avatar_url||''};});
+        body.innerHTML=notes.length===0?`<div style="text-align:center;padding:40px 0;color:var(--stone);">まだノートがありません</div>`:notes.map(noteCard).join('');
+      }
     })();
   }
 }
