@@ -304,7 +304,23 @@ body{background:#f0ece4;display:flex;justify-content:center;font-family:'Noto Se
 
 <!-- SEARCH -->
 <div class="page" id="p-search">
-  <div class="topbar" style="flex-direction:column;align-items:stretch;gap:8px;padding-bottom:14px;"><span style="color:#f2ead8;font-size:15px;font-weight:500;">ユーザーを探す</span><input id="sq" class="inp" placeholder="ユーザー名で検索…" oninput="renderSearch()" style="border-radius:20px;"/></div>
+  <div class="topbar" style="flex-direction:column;align-items:stretch;gap:8px;padding-bottom:10px;">
+    <span style="color:#f2ead8;font-size:15px;font-weight:500;">検索</span>
+    <input id="sq" class="inp" placeholder="ユーザー名・獲物・猟法で検索…" oninput="renderSearch()" style="border-radius:20px;"/>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button class="mv-chip on" id="st-all" onclick="setSearchTab('all',this)">すべて</button>
+      <button class="mv-chip" id="st-user" onclick="setSearchTab('user',this)">ユーザー</button>
+      <button class="mv-chip" id="st-post" onclick="setSearchTab('post',this)">投稿</button>
+    </div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:2px;" id="search-quick-tags">
+      <button class="mv-chip" onclick="quickSearch('イノシシ')">🐗 イノシシ</button>
+      <button class="mv-chip" onclick="quickSearch('ニホンジカ')">🦌 シカ</button>
+      <button class="mv-chip" onclick="quickSearch('単独猟')">単独猟</button>
+      <button class="mv-chip" onclick="quickSearch('巻狩り')">巻狩り</button>
+      <button class="mv-chip" onclick="quickSearch('くくり罠')">くくり罠</button>
+      <button class="mv-chip" onclick="quickSearch('マガモ')">🐦 マガモ</button>
+    </div>
+  </div>
   <div class="sb" id="s-body"></div><nav class="bnav" id="bn5"></nav>
 </div>
 
@@ -421,6 +437,13 @@ body{background:#f0ece4;display:flex;justify-content:center;font-family:'Noto Se
   <nav class="bnav" id="bn-mv"></nav>
 </div>
 
+
+<!-- PHOTO VIEWER -->
+<div id="photo-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);z-index:500;align-items:center;justify-content:center;flex-direction:column;" onclick="closePhoto()">
+  <button onclick="closePhoto()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:20px;">✕</button>
+  <img id="photo-img" src="" style="max-width:96vw;max-height:85vh;object-fit:contain;border-radius:6px;" onclick="event.stopPropagation()"/>
+  <div id="photo-nav" style="display:flex;gap:16px;margin-top:12px;"></div>
+</div>
 <!-- EDIT MODAL -->
 <div class="modal-bg" id="edit-modal" onclick="if(event.target===this)closeEdit()">
   <div class="modal-box">
@@ -708,6 +731,8 @@ function postCard(post){
   const privB=!post.is_public?`<span class="priv-badge">記録のみ</span>`:'';
   const likeCount=Array.isArray(post.likes)?post.likes.length:0;
   const cmtCount=Array.isArray(post.comments)?post.comments.length:0;
+  const mediaUrls=Array.isArray(post.media_urls)?post.media_urls.filter(u=>u&&u.length>0):[];
+  const mediaHTML=mediaUrls.length>0?`<div style="display:flex;gap:6px;overflow-x:auto;padding:0 14px 10px 17px;-webkit-overflow-scrolling:touch;">${mediaUrls.map((u,i)=>`<div onclick="viewPostMedia('${post.id}',${i})" style="flex-shrink:0;width:90px;height:90px;border-radius:8px;overflow:hidden;cursor:pointer;border:1px solid var(--earth2);"><img src="${u}" style="width:100%;height:100%;object-fit:cover;" loading="lazy"/></div>`).join('')}</div>`:'';
   return`<div class="card">
     <div style="display:flex;align-items:center;gap:10px;padding:13px 14px 11px 17px;">
       ${avHTML(prof,40,`viewUser('${post.user_id}')`)}
@@ -721,8 +746,9 @@ function postCard(post){
       <div style="font-size:11px;color:var(--stone);margin-bottom:5px;">${locT}</div>
       ${post.memo?`<p style="font-size:13px;color:var(--ink2);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.6;">${post.memo}</p>`:''}
     </div>
+    ${mediaHTML}
     <div style="display:flex;align-items:center;gap:16px;padding:9px 14px 9px 17px;border-top:1px solid var(--earth2);">
-      <button class="like-btn ${liked?'liked':''}" onclick="toggleLike('${post.id}',event)">${liked?'❤':'♡'} ${likeCount}</button>
+      <button class="like-btn ${liked?'liked':''}" id="like-${post.id}" onclick="toggleLike('${post.id}',event)">${liked?'❤':'♡'} ${likeCount}</button>
       <button style="display:flex;align-items:center;gap:5px;background:none;border:none;cursor:pointer;color:var(--stone);font-size:13px;" onclick="viewPost('${post.id}')">💬 ${cmtCount}</button>
     </div>
   </div>`;
@@ -750,18 +776,31 @@ function noteCard(note){
 
 async function toggleLike(postId,ev){
   ev&&ev.stopPropagation();
+  if(!me){showToast('ログインが必要です');return;}
   if(isDemo){
     const p=demoData.posts.find(x=>x.id===postId);
     if(!p)return;
     const idx=p.likes.indexOf(me.id);
     if(idx>=0)p.likes.splice(idx,1);else p.likes.push(me.id);
-    renderTL();return;
+    // ボタンをすぐ更新
+    const btn=document.getElementById('like-'+postId);
+    if(btn){const liked=p.likes.includes(me.id);btn.className='like-btn'+(liked?' liked':'');btn.innerHTML=(liked?'❤':'♡')+' '+p.likes.length;}
+    return;
   }
-  // Supabase: toggle
-  const {data:existing}=await sb.from('post_likes').select('*').eq('post_id',postId).eq('user_id',me.id).single();
-  if(existing)await sb.from('post_likes').delete().eq('post_id',postId).eq('user_id',me.id);
-  else await sb.from('post_likes').insert({post_id:postId,user_id:me.id});
-  renderTL();
+  try{
+    // 現在のいいね状態を確認
+    const{data:existing}=await sb.from('post_likes').select('id').eq('post_id',postId).eq('user_id',me.id).maybeSingle();
+    if(existing){
+      await sb.from('post_likes').delete().eq('post_id',postId).eq('user_id',me.id);
+    }else{
+      await sb.from('post_likes').insert({post_id:postId,user_id:me.id});
+    }
+    // いいね数を取得してボタン更新
+    const{count}=await sb.from('post_likes').select('*',{count:'exact',head:true}).eq('post_id',postId);
+    const liked=!existing;
+    const btn=document.getElementById('like-'+postId);
+    if(btn){btn.className='like-btn'+(liked?' liked':'');btn.innerHTML=(liked?'❤':'♡')+' '+(count||0);}
+  }catch(e){console.error('toggleLike error:',e);}
 }
 async function toggleNoteLike(noteId,ev){
   ev&&ev.stopPropagation();
@@ -1114,12 +1153,84 @@ async function saveProfile(){
 /* ============================================================
    検索
 ============================================================ */
+let searchTab='all';
+function setSearchTab(t,el){
+  searchTab=t;
+  document.querySelectorAll('#p-search .mv-chip[id^="st-"]').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  renderSearch();
+}
+function quickSearch(kw){
+  document.getElementById('sq').value=kw;
+  searchTab='all';
+  document.querySelectorAll('#p-search .mv-chip[id^="st-"]').forEach(b=>b.classList.remove('on'));
+  document.getElementById('st-all')?.classList.add('on');
+  renderSearch();
+}
 async function renderSearch(){
   const q=document.getElementById('sq')?.value?.trim()||'';
-  let users=[];
-  if(isDemo){users=demoData.users.filter(u=>u.id!==me?.id&&(u.display_name.includes(q)||u.username.includes(q)));}
-  else{const{data}=await sb.from('profiles').select('*').neq('id',me.id).ilike('username','%'+q+'%');users=data||[];}
-  document.getElementById('s-body').innerHTML=users.map(u=>`<div style="background:var(--earth4);border-radius:10px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;border:1px solid var(--earth2);">${avHTML(u,42,`viewUser('${u.id}')`)}<div style="flex:1;cursor:pointer;" onclick="viewUser('${u.id}')"><div style="font-size:14px;color:var(--ink);">${u.display_name}</div><div style="font-size:12px;color:var(--stone);">@${u.username}</div>${u.bio?`<div style="font-size:12px;color:var(--stone2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${u.bio}</div>`:''}</div></div>`).join('')||`<div style="text-align:center;padding:40px 0;color:var(--stone);">ユーザーが見つかりません</div>`;}
+  const body=document.getElementById('s-body');
+  body.innerHTML=`<div style="text-align:center;padding:30px 0;color:var(--stone);">検索中…</div>`;
+  let html='';
+  try{
+    // ユーザー検索
+    if(searchTab==='all'||searchTab==='user'){
+      let users=[];
+      if(isDemo){
+        users=demoData.users.filter(u=>u.id!==me?.id&&(!q||(u.display_name.includes(q)||u.username.includes(q)||( u.bio&&u.bio.includes(q)))));
+      }else{
+        const{data}=await sb.from('profiles').select('*').neq('id',me.id)
+          .or(`display_name.ilike.%${q}%,username.ilike.%${q}%,bio.ilike.%${q}%`)
+          .limit(20);
+        users=data||[];
+      }
+      if(users.length>0){
+        html+=`<div style="font-size:12px;color:var(--stone);padding:8px 14px 4px;font-weight:500;">👤 ユーザー (${users.length})</div>`;
+        html+=users.map(u=>`<div style="background:var(--earth4);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;border:1px solid var(--earth2);">${avHTML(u,42,`viewUser('${u.id}')`)}<div style="flex:1;cursor:pointer;" onclick="viewUser('${u.id}')"><div style="font-size:14px;color:var(--ink);">${u.display_name}</div><div style="font-size:12px;color:var(--stone);">@${u.username}</div>${u.bio?`<div style="font-size:12px;color:var(--stone2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${u.bio}</div>`:''}</div></div>`).join('');
+      }
+    }
+    // 投稿検索（獲物・猟法・場所・メモ）
+    if(q&&(searchTab==='all'||searchTab==='post')){
+      let posts=[];
+      if(isDemo){
+        posts=demoData.posts.filter(p=>p.is_public&&(
+          (p.hunting_method&&p.hunting_method.includes(q))||
+          (p.hunting_sub_method&&p.hunting_sub_method.includes(q))||
+          (Array.isArray(p.prey)&&p.prey.some(x=>x.name.includes(q)))||
+          (p.memo&&p.memo.includes(q))||
+          (p.location_display&&p.location_display.includes(q))
+        ));
+      }else{
+        // メモ・猟法・場所で検索
+        const{data:d1}=await sb.from('posts').select('*').eq('is_public',true)
+          .or(`memo.ilike.%${q}%,hunting_method.ilike.%${q}%,hunting_sub_method.ilike.%${q}%,location_display.ilike.%${q}%,location_pref.ilike.%${q}%,location_city.ilike.%${q}%`)
+          .limit(20);
+        posts=d1||[];
+        // profiles情報を別途取得
+        for(const p of posts){
+          const{data:prof}=await sb.from('profiles').select('display_name,avatar_url').eq('id',p.user_id).single();
+          p.profiles=prof||{display_name:p.user_id,avatar_url:''};
+        }
+        // prey（獲物）で絞り込み（JSON検索）
+        if(posts.length===0){
+          const{data:d2}=await sb.from('posts').select('*').eq('is_public',true).limit(50);
+          const filtered=(d2||[]).filter(p=>Array.isArray(p.prey)&&p.prey.some(x=>x.name&&x.name.includes(q)));
+          for(const p of filtered){
+            const{data:prof}=await sb.from('profiles').select('display_name,avatar_url').eq('id',p.user_id).single();
+            p.profiles=prof||{display_name:p.user_id,avatar_url:''};
+          }
+          posts=filtered;
+        }
+      }
+      if(posts.length>0){
+        html+=`<div style="font-size:12px;color:var(--stone);padding:8px 14px 4px;font-weight:500;">📝 投稿 (${posts.length})</div>`;
+        html+=posts.map(postCard).join('');
+      }
+    }
+    if(!html) html=`<div style="text-align:center;padding:40px 0;color:var(--stone);">${q?'「'+q+'」の検索結果がありません':'キーワードを入力してください'}</div>`;
+    body.innerHTML=`<div style="padding:0 14px;">${html}</div>`;
+  }catch(e){body.innerHTML=`<div style="text-align:center;padding:40px 0;color:var(--rust2);">エラー: ${e.message}</div>`;}
+}
 
 /* ============================================================
    DM
@@ -1178,6 +1289,29 @@ async function renderOther(){
   document.getElementById('ot-body').innerHTML=ps.length===0?`<div style="text-align:center;padding:40px 0;color:var(--stone);">公開投稿がありません</div>`:ps.map(postCard).join('');
 }
 
+
+/* 写真ビューアー */
+let photoUrls=[],photoIdx=0;
+function viewPostMedia(postId,idx){
+  // 投稿の写真を取得
+  const card=document.querySelector(`[onclick*="viewPost('${postId}')"]`)?.closest('.card');
+  const imgs=card?[...card.querySelectorAll('img')].map(i=>i.src):[];
+  if(imgs.length===0)return;
+  photoUrls=imgs;photoIdx=idx;
+  document.getElementById('photo-img').src=imgs[idx];
+  document.getElementById('photo-nav').innerHTML=imgs.length>1?imgs.map((_,i)=>`<div onclick="event.stopPropagation();showPhoto(${i})" style="width:8px;height:8px;border-radius:50%;background:${i===idx?'#fff':'rgba(255,255,255,.4)'};cursor:pointer;"></div>`).join(''):'';
+  document.getElementById('photo-modal').style.display='flex';
+  document.body.style.overflow='hidden';
+}
+function showPhoto(i){
+  photoIdx=i;
+  document.getElementById('photo-img').src=photoUrls[i];
+  document.getElementById('photo-nav').innerHTML=photoUrls.map((_,j)=>`<div onclick="event.stopPropagation();showPhoto(${j})" style="width:8px;height:8px;border-radius:50%;background:${j===i?'#fff':'rgba(255,255,255,.4)'};cursor:pointer;"></div>`).join('');
+}
+function closePhoto(){
+  document.getElementById('photo-modal').style.display='none';
+  document.body.style.overflow='';
+}
 /* ============================================================
    猟場データビュー
 ============================================================ */
