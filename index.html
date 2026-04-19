@@ -629,21 +629,36 @@ async function fetchPosts(){
   if(isDemo)return demoData.posts.filter(p=>p.is_public).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
   // 公開投稿 + 自分の投稿（非公開含む）を取得
   const {data,error}=await sb.from('posts')
-    .select('*,profiles(display_name,avatar_url)')
+    .select('*')
     .order('created_at',{ascending:false});
   if(error){console.error('fetchPosts error:',error);showToast('投稿読み込みエラー: '+error.message,4000);}
-  // 公開 or 自分の投稿だけ表示
-  return (data||[]).filter(p=>p.is_public||p.user_id===me?.id);
+  const posts=(data||[]).filter(p=>p.is_public||p.user_id===me?.id);
+  // profiles情報を別途取得してマージ
+  for(const p of posts){
+    const{data:prof}=await sb.from('profiles').select('display_name,avatar_url').eq('id',p.user_id).single();
+    p.profiles=prof||{display_name:p.user_id,avatar_url:''};
+  }
+  return posts;
 }
 async function fetchAllPosts(){
   if(isDemo)return demoData.posts;
-  const {data}=await sb.from('posts').select('*,profiles(display_name,avatar_url)').order('created_at',{ascending:false});
-  return data||[];
+  const {data}=await sb.from('posts').select('*').order('created_at',{ascending:false});
+  const posts=data||[];
+  for(const p of posts){
+    const{data:prof}=await sb.from('profiles').select('display_name,avatar_url').eq('id',p.user_id).single();
+    p.profiles=prof||{display_name:p.user_id,avatar_url:''};
+  }
+  return posts;
 }
 async function fetchNotes(){
   if(isDemo)return demoData.notes.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
-  const {data}=await sb.from('notes').select('*,profiles(display_name,avatar_url)').order('created_at',{ascending:false});
-  return data||[];
+  const {data}=await sb.from('notes').select('*').order('created_at',{ascending:false});
+  const notes=data||[];
+  for(const n of notes){
+    const{data:prof}=await sb.from('profiles').select('display_name,avatar_url').eq('id',n.user_id).single();
+    n.profiles=prof||{display_name:n.user_id,avatar_url:''};
+  }
+  return notes;
 }
 async function fetchAllUsers(){
   if(isDemo)return demoData.users;
@@ -1052,9 +1067,13 @@ function renderMyBody(){
     body.innerHTML=`<div style="text-align:center;padding:40px 0;color:var(--stone);">Supabaseから読み込み中…</div>`;
     (async()=>{
       if(myTab==='posts'){
-        const{data,error}=await sb.from('posts').select('*,profiles(display_name,avatar_url)').eq('user_id',me.id).order('created_at',{ascending:false});
+        const{data,error}=await sb.from('posts').select('*').eq('user_id',me.id).order('created_at',{ascending:false});
         if(error){body.innerHTML=`<div style="text-align:center;padding:40px 0;color:var(--rust2);">エラー: ${error.message}</div>`;}
-        else body.innerHTML=(data||[]).length===0?`<div style="text-align:center;padding:40px 0;color:var(--stone);">まだ投稿がありません</div>`:(data||[]).map(postCard).join('');
+        else{
+          const posts=data||[];
+          posts.forEach(p=>{p.profiles={display_name:me.display_name,avatar_url:me.avatar_url||''};});
+          body.innerHTML=posts.length===0?`<div style="text-align:center;padding:40px 0;color:var(--stone);">まだ投稿がありません</div>`:posts.map(postCard).join('');
+        }
       }
       else if(myTab==='notes'){const{data}=await sb.from('notes').select('*,profiles(display_name,avatar_url)').eq('user_id',me.id).order('created_at',{ascending:false});body.innerHTML=(data||[]).length===0?`<div style="text-align:center;padding:40px 0;color:var(--stone);">まだノートがありません</div>`:(data||[]).map(noteCard).join('');}
     })();
