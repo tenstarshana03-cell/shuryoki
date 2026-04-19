@@ -4,7 +4,6 @@
 <meta charset="UTF-8"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="狩猟記"/>
 <meta name="theme-color" content="#2a4a1a"/>
 <link rel="manifest" href="./manifest.json"/>
@@ -124,7 +123,7 @@ body{background:#f0ece4;display:flex;justify-content:center;font-family:'Noto Se
   </div>
   <div class="login-box">
     <h2 style="color:var(--ink);margin-bottom:4px;font-size:16px;">🔧 データベース接続</h2>
-    <p style="font-size:11px;color:var(--stone);margin-bottom:16px;line-height:1.6;">管理者から共有されたURLとKeyを入力してください。<br>設定後はブラウザに保存されます。</p>
+    <p style="font-size:11px;color:var(--stone);margin-bottom:16px;line-height:1.6;">Supabaseのプロジェクト情報を入力してください。<br>設定後はブラウザに保存されます。</p>
     <div id="setup-status" style="padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:12px;background:rgba(139,58,26,.08);color:var(--rust);border:1px solid rgba(139,58,26,.2);">未接続</div>
     <div style="margin-bottom:10px;">
       <label style="font-size:12px;color:var(--ink2);display:block;margin-bottom:4px;">Project URL</label>
@@ -136,7 +135,7 @@ body{background:#f0ece4;display:flex;justify-content:center;font-family:'Noto Se
     </div>
     <button class="btn-moss" style="width:100%;padding:11px;letter-spacing:.1em;margin-bottom:8px;" onclick="connectSupabase()">接続する</button>
     <div style="border-top:1px solid var(--earth);padding-top:12px;margin-top:4px;">
-      <p style="font-size:11px;color:var(--stone);margin-bottom:8px;">⚠️ URLとKeyがわからない場合はデモモードで機能を確認できます</p>
+      <p style="font-size:11px;color:var(--stone);margin-bottom:8px;">⚠️ Supabaseをまだ設定していない場合はデモモードで確認できます</p>
       <button onclick="startDemo()" style="width:100%;padding:9px;background:transparent;color:var(--moss2);font-size:13px;border:1px solid var(--moss2);border-radius:6px;cursor:pointer;font-family:'Noto Serif JP',serif;">デモモードで起動</button>
     </div>
   </div>
@@ -582,7 +581,7 @@ function avHTML(u,sz=38,fn=''){
   return`<div class="av" style="width:${sz}px;height:${sz}px;font-size:${Math.round(sz*.38)}px;" ${c}>${dn.charAt(0)}</div>`;
 }
 function bnHTML(act){
-  const hasAdmin=false; // ユーザー版: 管理タブ非表示
+  const hasAdmin=false;
   const its=[
     {id:'p-timeline',ic:'🏠',lb:'ホーム'},
     {id:'p-search',ic:'🔍',lb:'探す'},
@@ -1373,7 +1372,7 @@ async function adminToggleAdmin(userId,val){
    起動時の復元
 ============================================================ */
 window.addEventListener('load',()=>{
-  // Supabase固定接続（iPhoneでもデモにならない）
+  // Supabase直接接続
   sb=window.supabase.createClient('https://mfjjcytansqgayahsfyw.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mampjeXRhbnNxZ2F5YWhzZnl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1MTM5MTksImV4cCI6MjA5MjA4OTkxOX0.pVuYjFBBxOk2MsnMbu0w-tWbVMDtVmFc9iZD7JczBsE');
   sb.auth.getSession().then(({data})=>{
     if(data.session){
@@ -1383,27 +1382,9 @@ window.addEventListener('load',()=>{
     }else go('p-login');
   }).catch(()=>go('p-login'));
 });
-      }else go('p-login');
-    });
-  }
-  else{
-    // URLとKeyを自動設定
-    localStorage.setItem('sb_url','https://mfjjcytansqgayahsfyw.supabase.co');
-    localStorage.setItem('sb_key','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mampjeXRhbnNxZ2F5YWhzZnl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1MTM5MTksImV4cCI6MjA5MjA4OTkxOX0.pVuYjFBBxOk2MsnMbu0w-tWbVMDtVmFc9iZD7JczBsE');
-    sb=window.supabase.createClient('https://mfjjcytansqgayahsfyw.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mampjeXRhbnNxZ2F5YWhzZnl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1MTM5MTksImV4cCI6MjA5MjA4OTkxOX0.pVuYjFBBxOk2MsnMbu0w-tWbVMDtVmFc9iZD7JczBsE');
-    go('p-login');
-  }
-});
 document.getElementById('lp')?.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 document.getElementById('edit-modal')?.addEventListener('click',e=>{if(e.target===document.getElementById('edit-modal'))closeEdit();});
 </script>
-
-<script>
-if('serviceWorker' in navigator){
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(()=>{});
-  });
-}
-</script>
+<script>if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});</script>
 </body>
 </html>
