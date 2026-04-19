@@ -1053,8 +1053,10 @@ function handleAv(inp){const f=inp.files[0];if(!f)return;const r=new FileReader(
 async function saveProfile(){
   const n=document.getElementById('e-name').value.trim(),u=document.getElementById('e-uname').value.trim(),b=document.getElementById('e-bio').value.trim();
   if(!n||!u){alert('必須項目を入力してください');return;}
-  if(isDemo){const i=demoData.users.findIndex(x=>x.id===me.id);if(i>=0){demoData.users[i].display_name=n;demoData.users[i].username=u;demoData.users[i].bio=b;me=demoData.users[i];}}
-  else{await sb.from('profiles').update({display_name:n,username:u,bio:b}).eq('id',me.id);me={...me,display_name:n,username:u,bio:b};}
+  const updateData={display_name:n,username:u,bio:b};
+  if(newAv)updateData.avatar_url=newAv;
+  if(isDemo){const i=demoData.users.findIndex(x=>x.id===me.id);if(i>=0){Object.assign(demoData.users[i],updateData);me=demoData.users[i];}}
+  else{await sb.from('profiles').update(updateData).eq('id',me.id);me={...me,...updateData};}
   closeEdit();renderMy();showToast('プロフィールを更新しました');
 }
 
